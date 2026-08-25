@@ -1,6 +1,7 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const _ = db.command
 
 const ALLOWED_CATEGORIES = ['shift', 'case_guide', 'resume_guide']
 const ALLOWED_TYPES = ['requirement', 'service']
@@ -40,6 +41,114 @@ exports.main = async (event) => {
         status: d.status,
         ownerUid: d.owner_uid,
         createdAt: d.created_at
+      }))
+    }
+  }
+
+  // ── 详情：撮合单 + 申请人列表（仅发布方可见完整申请人；申请方只见自己）──
+  if (action === 'get') {
+    const { dealingId } = event
+    if (!dealingId) return { ok: false, message: '缺少 dealingId' }
+    const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
+    if (!d || !d.data) return { ok: false, message: '撮合单不存在' }
+    const dealing = d.data
+
+    const user = await getUser()
+    const isOwner = !!(user && user._id === dealing.owner_uid)
+    const myHospitalId = user ? user.hospital_id : null
+    const crossHospital = !!(user && user.verify_status === 'verified' && myHospitalId && myHospitalId !== dealing.hospital_id)
+
+    let applications = []
+    if (isOwner) {
+      const res = await db.collection('applications')
+        .where({ dealing_id: dealingId })
+        .orderBy('created_at', 'desc')
+        .limit(50)
+        .get()
+      applications = res.data.map(a => ({
+        _id: a._id,
+        applicantUid: a.applicant_uid,
+        nickname: a.applicant_nickname || '医同学',
+        credit: a.applicant_credit == null ? 100 : a.applicant_credit,
+        completed: a.applicant_completed || 0,
+        message: a.message,
+        status: a.status
+      }))
+    } else if (user) {
+      const res = await db.collection('applications')
+        .where({ dealing_id: dealingId, applicant_uid: user._id })
+        .get()
+      applications = res.data.map(a => ({
+        _id: a._id,
+        applicantUid: a.applicant_uid,
+        nickname: a.applicant_nickname || '我',
+        credit: a.applicant_credit == null ? 100 : a.applicant_credit,
+        completed: a.applicant_completed || 0,
+        message: a.message,
+        status: a.status
+      }))
+    }
+
+    return {
+      dealing: {
+        _id: dealing._id,
+        type: dealing.type,
+        category: dealing.category,
+        title: dealing.title,
+        detail: dealing.detail,
+        schedule: dealing.schedule,
+        fee: dealing.fee,
+        status: dealing.status,
+        ownerUid: dealing.owner_uid,
+        ownerNickname: dealing.owner_nickname || '',
+        acceptedNickname: dealing.accepted_nickname || '',
+        hospitalName: dealing.hospital_name || '',
+        createdAt: dealing.created_at
+      },
+      isOwner,
+      crossHospital,
+      applications: isOwner ? applications : [],
+      myApplication: !isOwner && applications.length ? applications[0] : null
+    }
+  }
+
+  // ── 我的发布/我申请的 ──
+  if (action === 'mine') {
+    const user = await getUser()
+    if (!user) return { ok: false, message: '请先登录' }
+    const { role } = event // owner | applicant
+    if (role === 'applicant') {
+      const res = await db.collection('applications')
+        .where({ applicant_uid: user._id })
+        .orderBy('created_at', 'desc')
+        .limit(50)
+        .get()
+      const ids = res.data.map(a => a.dealing_id)
+      const dealings = ids.length
+        ? (await db.collection('dealings').where({ _id: _.in(ids) }).get()).data
+        : []
+      const dmap = {}
+      dealings.forEach(x => { dmap[x._id] = x })
+      return {
+        list: res.data.filter(a => dmap[a.dealing_id]).map(a => {
+          const d = dmap[a.dealing_id]
+          return {
+            _id: d._id, title: d.title, category: d.category, status: d.status,
+            fee: d.fee, schedule: d.schedule,
+            applicationStatus: a.status, applicationId: a._id
+          }
+        })
+      }
+    }
+    const res = await db.collection('dealings')
+      .where({ owner_uid: user._id })
+      .orderBy('created_at', 'desc')
+      .limit(50)
+      .get()
+    return {
+      list: res.data.map(d => ({
+        _id: d._id, title: d.title, category: d.category, status: d.status,
+        fee: d.fee, schedule: d.schedule
       }))
     }
   }

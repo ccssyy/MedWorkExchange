@@ -1,0 +1,98 @@
+<view wx:if="{{loading}}" class="empty text-hint">加载中…</view>
+
+<view wx:elif="{{dealing}}" class="container">
+  <view class="card info-card">
+    <view class="row-head">
+      <view class="tag tag-{{dealing.category}}">{{dealing.categoryLabel}}</view>
+      <view class="status-badge status-{{dealing.status}}">{{dealing.statusLabel}}</view>
+    </view>
+    <view class="title">{{dealing.title}}</view>
+    <view class="info-row" wx:if="{{dealing.schedule}}">
+      <text class="info-label">时段</text>
+      <text>{{dealing.schedule}}</text>
+    </view>
+    <view class="info-row">
+      <text class="info-label">酬金</text>
+      <text class="text-fee">{{dealing.feeLabel}}</text>
+    </view>
+    <view class="info-row" wx:if="{{dealing.detail}}">
+      <text class="info-label">说明</text>
+      <text>{{dealing.detail}}</text>
+    </view>
+  </view>
+
+  <view wx:if="{{crossHospital}}" class="card cross-card">
+    该撮合单属于其他医院，仅可浏览，不能申请
+  </view>
+
+  <block wx:if="{{isOwner}}">
+    <view class="section-title" wx:if="{{dealing.status === 'applied'}}">
+      申请人（{{applications.length}}）
+    </view>
+    <view class="card applicant" wx:for="{{applications}}" wx:key="_id">
+      <view class="avatar">{{item.nickname[0]}}</view>
+      <view class="applicant-info">
+        <view class="applicant-name">{{item.nickname}}</view>
+        <view class="text-hint">信用 {{item.credit}} · 已完成 {{item.completed}} 次</view>
+        <view class="text-secondary applicant-msg" wx:if="{{item.message}}">留言：{{item.message}}</view>
+      </view>
+      <button
+        wx:if="{{item.status === 'pending'}}"
+        class="btn-primary accept-btn"
+        size="mini"
+        data-id="{{item._id}}"
+        bindtap="onAccept"
+      >确认</button>
+      <view wx:elif="{{item.status === 'accepted'}}" class="tag">已选定</view>
+      <view wx:elif="{{item.status === 'rejected'}}" class="text-hint">已拒绝</view>
+    </view>
+
+    <view class="card empty-tip" wx:if="{{dealing.status === 'published'}}">
+      已发布，等待他人申请…
+    </view>
+
+    <view class="card confirmed-tip" wx:if="{{dealing.status === 'confirmed'}}">
+      已选定 {{dealing.acceptedNickname || '对方'}}，请线下沟通履约，完成后到「我的-我的发布」确认完成
+    </view>
+  </block>
+
+  <block wx:else>
+    <view class="card apply-card" wx:if="{{!myApplication && !crossHospital && (dealing.status === 'published' || dealing.status === 'applied')}}">
+      <textarea
+        class="apply-textarea"
+        placeholder="给发布方留言（如：同科室，时间合适）"
+        value="{{applyMessage}}"
+        bindinput="onApplyMessageInput"
+        maxlength="100"
+      />
+      <button class="btn-primary apply-btn" disabled="{{applying}}" bindtap="onApply">
+        {{applying ? '申请中…' : '申请接单'}}
+      </button>
+    </view>
+
+    <view class="card my-apply-card" wx:if="{{myApplication}}">
+      <view class="my-apply-status">
+        我的申请：
+        <text class="status-badge status-apply-{{myApplication.status}}">
+          {{myApplication.status === 'pending' ? '等待确认' : myApplication.status === 'accepted' ? '已通过' : myApplication.status === 'rejected' ? '未通过' : '已取消'}}
+        </text>
+      </view>
+      <button
+        wx:if="{{myApplication.status === 'pending'}}"
+        class="cancel-btn"
+        size="mini"
+        bindtap="onCancelApply"
+      >取消申请</button>
+    </view>
+
+    <view class="card confirmed-tip" wx:if="{{myApplication && myApplication.status === 'accepted'}}">
+      申请已通过，请到「消息」与对方沟通履约细节
+    </view>
+  </block>
+
+  <view class="text-hint compliance">
+    酬金由双方线下直接结清，平台不代收代付；换班需遵守所在医院相关规定。
+  </view>
+</view>
+
+<view wx:else class="empty text-hint">撮合单不存在</view>

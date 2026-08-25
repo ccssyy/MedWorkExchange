@@ -1,0 +1,6 @@
+{
+  "name": "application",
+  "version": "1.0.0",
+  "description": "申请/预约：apply、accept、cancel（含医院隔离与状态机校验）",
+  "main": "index.js"
+}

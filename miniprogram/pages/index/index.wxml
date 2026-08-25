@@ -20,7 +20,14 @@
     暂无信息，下拉刷新或去发布第一条吧
   </view>
 
-  <view wx:else class="card" wx:for="{{dealings}}" wx:key="_id">
+  <view
+    wx:else
+    class="card"
+    wx:for="{{dealings}}"
+    wx:key="_id"
+    data-id="{{item._id}}"
+    bindtap="onDealingTap"
+  >
     <view class="row-head">
       <view class="tag tag-{{item.category}}">{{item.categoryLabel}}</view>
       <view class="text-hint">{{item.statusLabel}}</view>
@@ -32,4 +39,8 @@
       <view class="text-hint">{{item.schedule}}</view>
     </view>
   </view>
+</view>
+
+<view class="fab" bindtap="onFabTap">
+  <view class="fab-plus">+</view>
 </view>
