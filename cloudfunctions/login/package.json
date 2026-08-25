@@ -1,0 +1,6 @@
+{
+  "name": "login",
+  "version": "1.0.0",
+  "description": "登录建档与用户档案",
+  "main": "index.js"
+}

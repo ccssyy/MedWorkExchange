@@ -1,0 +1,6 @@
+{
+  "name": "hospital",
+  "version": "1.0.0",
+  "description": "医院注册表：省市层级查询",
+  "main": "index.js"
+}

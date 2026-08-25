@@ -1,0 +1,35 @@
+<view class="hospital-bar" bindtap="onHospitalTap">
+  <view class="hospital-name">{{browsingHospitalName}}</view>
+  <view class="hospital-switch text-hint">切换 ▾</view>
+</view>
+
+<view class="category-tabs">
+  <view
+    wx:for="{{categoryTabs}}"
+    wx:key="key"
+    class="category-tab {{activeCategory === item.key ? 'category-tab-active' : ''}}"
+    data-key="{{item.key}}"
+    bindtap="onCategoryTap"
+  >{{item.label}}</view>
+</view>
+
+<view class="container">
+  <view wx:if="{{loading}}" class="empty text-hint">加载中…</view>
+
+  <view wx:elif="{{!dealings.length}}" class="empty text-hint">
+    暂无信息，下拉刷新或去发布第一条吧
+  </view>
+
+  <view wx:else class="card" wx:for="{{dealings}}" wx:key="_id">
+    <view class="row-head">
+      <view class="tag tag-{{item.category}}">{{item.categoryLabel}}</view>
+      <view class="text-hint">{{item.statusLabel}}</view>
+    </view>
+    <view class="title">{{item.title}}</view>
+    <view class="detail text-secondary">{{item.detail}}</view>
+    <view class="row-foot">
+      <view class="text-fee">{{item.feeLabel}}</view>
+      <view class="text-hint">{{item.schedule}}</view>
+    </view>
+  </view>
+</view>

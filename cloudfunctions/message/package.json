@@ -1,0 +1,6 @@
+{
+  "name": "message",
+  "version": "1.0.0",
+  "description": "站内私信：会话列表（M3 实现收发）",
+  "main": "index.js"
+}

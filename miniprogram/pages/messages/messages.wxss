@@ -1,0 +1,33 @@
+.empty {
+  text-align: center;
+  padding: 120rpx 0;
+}
+
+.conv {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.conv-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.conv-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  margin-bottom: 8rpx;
+}
+
+.conv-last {
+  font-size: 26rpx;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.conv-time {
+  flex-shrink: 0;
+  margin-left: 16rpx;
+}
