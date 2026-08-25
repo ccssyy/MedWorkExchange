@@ -1,0 +1,11 @@
+# WorkBuddy 项目数据（不纳入版本库）
+.workbuddy/
+
+# 依赖
+node_modules/
+
+# 小程序 IDE
+project.private.config.json
+
+# 系统文件
+.DS_Store
