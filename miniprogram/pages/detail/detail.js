@@ -11,10 +11,20 @@ Page({
     loading: true,
     applyMessage: '',
     applying: false,
+    // 编辑弹层
+    editOpen: false,
+    editTitle: '',
+    editDetail: '',
+    editFee: '',
+    editStartDate: '',
+    editStartTime: '',
+    editEndDate: '',
+    editEndTime: '',
+    editSaving: false,
+    canEdit: false,
     categoryLabelMap: {
-      shift: '换班',
-      case_guide: '病例指导',
-      resume_guide: '简历指导'
+      shift: '值班',
+      case_guide: '病例指导'
     },
     statusLabelMap: {
       published: '待接单',
@@ -46,12 +56,15 @@ Page({
       dealing.categoryLabel = this.data.categoryLabelMap[dealing.category] || dealing.category
       dealing.statusLabel = this.data.statusLabelMap[dealing.status] || dealing.status
       dealing.feeLabel = dealing.fee ? `${dealing.fee} 元（线下与对方结清）` : '面议'
+      // 编辑可用性：本人 + published/applied 状态
+      const canEdit = !!r.isOwner && ['published', 'applied'].includes(dealing.status)
       this.setData({
         dealing,
         isOwner: !!r.isOwner,
         crossHospital: !!r.crossHospital,
         applications: r.applications || [],
         myApplication: r.myApplication || null,
+        canEdit,
         loading: false
       })
     }).catch(err => {
@@ -145,6 +158,105 @@ Page({
       }
     } catch (err) {
       wx.showToast({ title: '取消失败', icon: 'none' })
+    }
+  },
+
+  // ── 编辑弹层 ──
+  onEditTap() {
+    const d = this.data.dealing
+    if (!d) return
+    const s = d.startTime ? new Date(d.startTime) : null
+    const e = d.endTime ? new Date(d.endTime) : null
+    const pad = n => String(n).padStart(2, '0')
+    const dpart = x => x ? `${x.getFullYear()}-${pad(x.getMonth() + 1)}-${pad(x.getDate())}` : ''
+    const tpart = x => x ? `${pad(x.getHours())}:${pad(x.getMinutes())}` : '08:00'
+    this.setData({
+      editOpen: true,
+      editTitle: d.title,
+      editDetail: d.detail || '',
+      editFee: d.fee != null ? String(d.fee) : '',
+      editStartDate: s ? dpart(s) : '',
+      editStartTime: s ? tpart(s) : '08:00',
+      editEndDate: e ? dpart(e) : '',
+      editEndTime: e ? tpart(e) : '18:00'
+    })
+  },
+
+  onEditClose() { this.setData({ editOpen: false }) },
+  onEditNoop() {},
+  onEditTitleInput(e) { this.setData({ editTitle: e.detail.value }) },
+  onEditDetailInput(e) { this.setData({ editDetail: e.detail.value }) },
+  onEditFeeInput(e) { this.setData({ editFee: e.detail.value }) },
+  onEditStartDateChange(e) { this.setData({ editStartDate: e.detail.value }) },
+  onEditStartTimeChange(e) { this.setData({ editStartTime: e.detail.value }) },
+  onEditEndDateChange(e) { this.setData({ editEndDate: e.detail.value }) },
+  onEditEndTimeChange(e) { this.setData({ editEndTime: e.detail.value }) },
+
+  async onEditSave() {
+    if (this.data.editSaving) return
+    const { editTitle, editDetail, editFee, editStartDate, editStartTime, editEndDate, editEndTime } = this.data
+    if (!editTitle.trim()) return wx.showToast({ title: '标题不能为空', icon: 'none' })
+    const startIso = editStartDate ? `${editStartDate}T${editStartTime}:00` : null
+    const endIso = editEndDate ? `${editEndDate}T${editEndTime}:00` : null
+    if (startIso && endIso && new Date(endIso) <= new Date(startIso)) {
+      return wx.showToast({ title: '结束时间需晚于开始时间', icon: 'none' })
+    }
+    this.setData({ editSaving: true })
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'dealing',
+        data: {
+          action: 'update',
+          dealingId: this.data.id,
+          title: editTitle.trim(),
+          detail: editDetail.trim(),
+          fee: editFee ? Number(editFee) : null,
+          startTime: startIso,
+          endTime: endIso
+        }
+      })
+      const r = res.result || {}
+      if (r.ok) {
+        wx.showToast({ title: '已保存', icon: 'success' })
+        this.setData({ editOpen: false })
+        this.loadDetail()
+      } else if (r.code === 'RISK_CONTENT' || r.code === 'RISK_PRIVACY') {
+        wx.showModal({ title: '内容未通过审核', content: r.message, showCancel: false })
+      } else {
+        wx.showToast({ title: r.message || '保存失败', icon: 'none' })
+      }
+    } catch (err) {
+      console.error(err)
+      wx.showToast({ title: '保存失败，请重试', icon: 'none' })
+    } finally {
+      this.setData({ editSaving: false })
+    }
+  },
+
+  // ── 下架 ──
+  async onOffShelfTap() {
+    const confirmRes = await new Promise(resolve => {
+      wx.showModal({
+        title: '下架撮合单',
+        content: '下架后列表不再展示，待处理申请将自动拒绝。确认下架？',
+        success: resolve
+      })
+    })
+    if (!confirmRes.confirm) return
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'dealing',
+        data: { action: 'offShelf', dealingId: this.data.id }
+      })
+      const r = res.result || {}
+      if (r.ok) {
+        wx.showToast({ title: '已下架', icon: 'success' })
+        setTimeout(() => wx.navigateBack(), 700)
+      } else {
+        wx.showToast({ title: r.message || '下架失败', icon: 'none' })
+      }
+    } catch (err) {
+      wx.showToast({ title: '下架失败', icon: 'none' })
     }
   }
 })

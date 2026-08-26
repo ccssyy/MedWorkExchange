@@ -303,6 +303,78 @@ exports.main = async (event) => {
     return { ok: true, dealingId: added._id }
   }
 
+  // ── 编辑：仅本人 + 仅 published/applied 状态（确认后锁定不可改）──
+  if (action === 'update') {
+    const user = await getUser()
+    if (!user) return { ok: false, message: '请先登录' }
+    const { dealingId, title, detail, fee, startTime, endTime, department } = event
+    const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
+    if (!d || !d.data) return { ok: false, message: '撮合单不存在' }
+    const dealing = d.data
+    if (dealing.owner_uid !== user._id) {
+      return { ok: false, code: 'FORBIDDEN', message: '只能编辑自己发布的撮合单' }
+    }
+    if (!['published', 'applied'].includes(dealing.status)) {
+      return { ok: false, message: '已有申请人确认锁定后不可编辑，如需变更请先下架重新发布' }
+    }
+
+    const patch = { updated_at: new Date() }
+    if (title != null) {
+      if (!String(title).trim()) return { ok: false, message: '标题不能为空' }
+      patch.title = String(title).trim().slice(0, 30)
+    }
+    if (detail != null) patch.detail = String(detail).trim().slice(0, 500)
+    if (department != null) patch.department = String(department).slice(0, 30)
+    if (fee != null) {
+      if (!Number.isFinite(Number(fee)) || Number(fee) < 0 || Number(fee) > 100000) {
+        return { ok: false, message: '酬金格式非法' }
+      }
+      patch.fee = Number(fee)
+    }
+    let sT = dealing.start_time, eT = dealing.end_time
+    if (startTime) {
+      sT = new Date(startTime)
+      if (isNaN(sT.getTime())) return { ok: false, message: '开始时间格式非法' }
+      patch.start_time = sT
+    }
+    if (endTime) {
+      eT = new Date(endTime)
+      if (isNaN(eT.getTime())) return { ok: false, message: '结束时间格式非法' }
+      patch.end_time = eT
+    }
+    if (sT && eT && eT <= sT) return { ok: false, message: '结束时间必须晚于开始时间' }
+    if (sT && eT) patch.schedule = formatRange(new Date(sT), new Date(eT))
+
+    // 修改内容过审核管线
+    const changedText = `${patch.title || dealing.title}\n${patch.detail || dealing.detail || ''}`
+    const secResult = await secCheckText(OPENID, changedText)
+    if (!secResult.ok) return secResult
+
+    await db.collection('dealings').doc(dealingId).update({ data: patch })
+    return { ok: true }
+  }
+
+  // ── 下架：仅本人，软删除（列表过滤 deleted 状态）──
+  if (action === 'offShelf') {
+    const user = await getUser()
+    if (!user) return { ok: false, message: '请先登录' }
+    const { dealingId } = event
+    const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
+    if (!d || !d.data) return { ok: false, message: '撮合单不存在' }
+    if (d.data.owner_uid !== user._id) {
+      return { ok: false, code: 'FORBIDDEN', message: '只能下架自己发布的撮合单' }
+    }
+    const now = new Date()
+    // 同时拒绝全部待处理申请，避免申请人继续等待
+    await db.collection('applications').where({
+      dealing_id: dealingId, status: 'pending'
+    }).update({ data: { status: 'rejected', updated_at: now } })
+    await db.collection('dealings').doc(dealingId).update({
+      data: { status: 'cancelled', deleted_at: now, updated_at: now }
+    })
+    return { ok: true }
+  }
+
   return { ok: false, message: '未知 action' }
 }
 

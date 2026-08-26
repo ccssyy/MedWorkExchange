@@ -19,6 +19,10 @@
       <text class="info-label">说明</text>
       <text>{{dealing.detail}}</text>
     </view>
+    <view class="owner-ops" wx:if="{{isOwner && dealing.status !== 'cancelled'}}">
+      <view class="op-edit" wx:if="{{canEdit}}" bindtap="onEditTap">编辑</view>
+      <view class="op-offshelf" bindtap="onOffShelfTap">下架</view>
+    </view>
   </view>
 
   <view wx:if="{{crossHospital}}" class="card cross-card">
@@ -96,3 +100,56 @@
 </view>
 
 <view wx:else class="empty text-hint">撮合单不存在</view>
+
+<view wx:if="{{editOpen}}" class="edit-mask" bindtap="onEditClose">
+  <view class="edit-panel" catchtap="onEditNoop">
+    <view class="edit-title">编辑撮合单</view>
+
+    <view class="edit-field">
+      <text class="edit-label">标题</text>
+      <input class="edit-input" value="{{editTitle}}" bindinput="onEditTitleInput" maxlength="30" />
+    </view>
+
+    <view class="edit-field">
+      <text class="edit-label">酬金</text>
+      <view class="edit-fee-wrap">
+        <text class="fee-unit">￥</text>
+        <input class="edit-input" type="digit" value="{{editFee}}" bindinput="onEditFeeInput" />
+      </view>
+    </view>
+
+    <view class="edit-field">
+      <text class="edit-label">开始</text>
+      <view class="edit-time-row">
+        <picker mode="date" value="{{editStartDate}}" bindchange="onEditStartDateChange">
+          <view class="edit-time-value">{{editStartDate || '选日期'}}</view>
+        </picker>
+        <picker mode="time" value="{{editStartTime}}" bindchange="onEditStartTimeChange">
+          <view class="edit-time-value">{{editStartTime}}</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="edit-field">
+      <text class="edit-label">结束</text>
+      <view class="edit-time-row">
+        <picker mode="date" value="{{editEndDate}}" bindchange="onEditEndDateChange">
+          <view class="edit-time-value">{{editEndDate || '选日期'}}</view>
+        </picker>
+        <picker mode="time" value="{{editEndTime}}" bindchange="onEditEndTimeChange">
+          <view class="edit-time-value">{{editEndTime}}</view>
+        </picker>
+      </view>
+    </view>
+
+    <view class="edit-field">
+      <text class="edit-label">说明</text>
+      <textarea class="edit-textarea" value="{{editDetail}}" bindinput="onEditDetailInput" maxlength="500" />
+    </view>
+
+    <view class="edit-btns">
+      <view class="edit-cancel" bindtap="onEditClose">取消</view>
+      <view class="edit-save" bindtap="onEditSave">{{editSaving ? '保存中…' : '保存'}}</view>
+    </view>
+  </view>
+</view>
