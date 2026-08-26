@@ -2,5 +2,8 @@
   "name": "posts",
   "version": "1.0.0",
   "description": "留言板：发帖/评论/回复/点赞/删除，含三级内容安全管线",
-  "main": "index.js"
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^4.0.2"
+  }
 }

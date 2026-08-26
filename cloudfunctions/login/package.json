@@ -2,5 +2,8 @@
   "name": "login",
   "version": "1.0.0",
   "description": "登录建档与用户档案",
-  "main": "index.js"
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^4.0.2"
+  }
 }

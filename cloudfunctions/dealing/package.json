@@ -2,5 +2,8 @@
   "name": "dealing",
   "version": "1.0.0",
   "description": "撮合单：创建/列表（医院隔离强制）",
-  "main": "index.js"
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^4.0.2"
+  }
 }

@@ -5,24 +5,25 @@
     {{role === 'applicant' ? '还没有申请记录' : '还没有发布记录'}}
   </view>
 
-  <view
-    wx:else
-    class="card"
-    wx:for="{{list}}"
-    wx:key="_id"
-    data-id="{{item._id}}"
-    bindtap="onItemTap"
-  >
-    <view class="row-head">
-      <view class="tag tag-{{item.category}}">{{item.categoryLabel}}</view>
-      <view class="text-hint">
-        {{role === 'applicant' ? item.applyStatusLabel + ' · ' : ''}}{{item.statusLabel}}
+  <block wx:else>
+    <view
+      class="card"
+      wx:for="{{list}}"
+      wx:key="_id"
+      data-id="{{item._id}}"
+      bindtap="onItemTap"
+    >
+      <view class="row-head">
+        <view class="tag tag-{{item.category}}">{{item.categoryLabel}}</view>
+        <view class="text-hint">
+          {{role === 'applicant' ? item.applyStatusLabel + ' · ' : ''}}{{item.statusLabel}}
+        </view>
+      </view>
+      <view class="title">{{item.title}}</view>
+      <view class="row-foot">
+        <view class="text-fee">{{item.feeLabel}}</view>
+        <view class="text-hint">{{item.schedule}}</view>
       </view>
     </view>
-    <view class="title">{{item.title}}</view>
-    <view class="row-foot">
-      <view class="text-fee">{{item.feeLabel}}</view>
-      <view class="text-hint">{{item.schedule}}</view>
-    </view>
-  </view>
+  </block>
 </view>

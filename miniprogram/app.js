@@ -12,7 +12,7 @@ App({
   },
   globalData: {
     // 云开发环境 ID：部署时在云开发控制台创建环境后填入
-    cloudEnv: 'REPLACE_WITH_ENV_ID',
+    cloudEnv: 'cloud1-d9gwlepe0f2e51cb8',
     userInfo: null,
     // 当前浏览的医院（跨院透明浏览用），写操作一律以服务端 user.hospital_id 为准
     browsingHospitalId: null
