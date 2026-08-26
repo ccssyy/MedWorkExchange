@@ -128,3 +128,48 @@
 | `ad-slot` | 广告位容器（地域定向加载，无广告透明） |
 | `hospital-picker` | 医院搜索选择器（模糊+别名） |
 | `dept-picker` | 标准科室选择器（字典驱动） |
+
+## 7. 发帖与评论交互（v1.1 增补，决策 D15-D17）
+
+### 决策记录
+
+| # | 决策 | 结论 |
+|---|---|---|
+| D15 | 发帖身份 | **实名 + 匿名可选**：实名显示"昵称·医院"；匿名显示"匿名用户"。posts 存 `is_anonymous`，服务端始终记录真实 uid（追责链路保留） |
+| D16 | 评论层级 | **两级**：一级评论平铺 + 二级回复（"回复 @xx："前缀），微信评论区同款 |
+| D17 | 图片审核 | **自动审核**：imgSecCheck 全量先审后发，Pilot 期不设人工复审；举报下架兜底 |
+
+### 发帖页结构
+
+```
+话题胶囊单选（必选，7 类初始字典）
+→ 标题（30 字内，必填）
+→ 正文（1000 字内，必填；病例话题强制脱敏提示）
+→ 图片 0-3 张（imgSecCheck，Pilot 上限 3 张）
+→ 身份切换：实名（昵称·医院）/ 匿名（默认实名）
+→ 右上角"发布"按钮；提交即检测，违禁拦截红条提示常驻表单底部
+```
+
+### 帖子详情页结构
+
+```
+帖子卡：头像/昵称（或"匿名用户"）· 医院 · 话题 · 时间 · 正文 · 图片九宫格
+互动行：♡ 点赞（乐观更新，再点取消）· 举报
+评论区（两级）：
+  一级评论：平铺列表（头像/昵称/时间/内容/回复/删除）
+  二级回复：挂在一级评论下，「回复 @xx：」前缀
+底部固定输入框：评论或回复（回复时带 @目标），发送前 msgSecCheck
+删除：仅自己的帖子/评论可删，确认后逻辑删除（deleted_at）
+```
+
+### 数据模型增补
+
+```
+posts: { _id, topic, title, content, images[fileID], author_uid,
+         author_snapshot{nickname, hospitalName}, is_anonymous,
+         province, city, like_count, comment_count, status(active/deleted), created_at }
+comments: { _id, post_id, parent_id(一级为null), reply_to_uid, reply_to_name,
+            author_uid, author_snapshot, is_anonymous, content,
+            status(active/deleted), created_at }
+post_likes: { _id, post_id, uid, created_at }  // 唯一索引 post_id+uid，点赞/取消
+```
