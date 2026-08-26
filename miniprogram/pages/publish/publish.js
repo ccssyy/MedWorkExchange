@@ -11,9 +11,11 @@ Page({
     defaultHospital: '',
     departments: [],
     deptIndex: 0,
-    // 起止时间（年月日时分 picker）
-    startDate: '2026-01-01 08:00',
-    endDate: '2026-01-01 18:00',
+    // 起止时间：日期与时间分开存，提交时拼接（避免字符串截取 bug）
+    startDate: '2026-08-28',
+    startTime: '18:00',
+    endDate: '2026-08-29',
+    endTime: '08:00',
     title: '',
     detail: '',
     fee: '',
@@ -48,18 +50,18 @@ Page({
   onCategoryChange(e) { this.setData({ categoryIndex: Number(e.detail.value) }) },
   onDeptChange(e) { this.setData({ deptIndex: Number(e.detail.value) }) },
 
-  // 日期时间选择：日期 picker + 时间 picker 组合
+  // 日期时间选择：日期与时间独立 picker，各自更新
   onStartDateChange(e) { this.setData({ startDate: e.detail.value }) },
-  onStartTimeChange(e) { this.setData({ startDate: this.data.startDate.slice(0, 11) + e.detail.value + ':00' }) },
+  onStartTimeChange(e) { this.setData({ startTime: e.detail.value }) },
   onEndDateChange(e) { this.setData({ endDate: e.detail.value }) },
-  onEndTimeChange(e) { this.setData({ endDate: this.data.endDate.slice(0, 11) + e.detail.value + ':00' }) },
+  onEndTimeChange(e) { this.setData({ endTime: e.detail.value }) },
 
   onTitleInput(e) { this.setData({ title: e.detail.value }) },
   onDetailInput(e) { this.setData({ detail: e.detail.value }) },
   onFeeInput(e) { this.setData({ fee: e.detail.value }) },
 
   async onSubmit() {
-    const { categories, categoryIndex, title, detail, fee, startDate, endDate } = this.data
+    const { categories, categoryIndex, title, detail, fee, startDate, startTime, endDate, endTime } = this.data
     if (!title.trim()) {
       return wx.showToast({ title: '请填写标题', icon: 'none' })
     }
@@ -72,9 +74,15 @@ Page({
         success: () => wx.switchTab({ url: '/pages/profile/profile' })
       })
     }
-    const startIso = startDate.replace(' ', 'T')
-    const endIso = endDate.replace(' ', 'T')
-    if (new Date(endIso) <= new Date(startIso)) {
+    // 拼接 ISO 时间：日期 + T + 时分 + :00 秒（iOS/Android 双端安全格式）
+    const startIso = `${startDate}T${startTime}:00`
+    const endIso = `${endDate}T${endTime}:00`
+    const startT = new Date(startIso)
+    const endT = new Date(endIso)
+    if (isNaN(startT.getTime()) || isNaN(endT.getTime())) {
+      return wx.showToast({ title: '请选择完整的起止时间', icon: 'none' })
+    }
+    if (endT <= startT) {
       return wx.showToast({ title: '结束时间需晚于开始时间', icon: 'none' })
     }
 

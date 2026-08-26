@@ -30,8 +30,8 @@
         <picker mode="date" value="{{startDate}}" bindchange="onStartDateChange">
           <view class="time-value">{{startDate}}</view>
         </picker>
-        <picker mode="time" value="{{startDate}}" bindchange="onStartTimeChange">
-          <view class="time-value">改时间</view>
+        <picker mode="time" value="{{startTime}}" bindchange="onStartTimeChange">
+          <view class="time-value">{{startTime}}</view>
         </picker>
       </view>
       <view class="time-row">
@@ -39,8 +39,8 @@
         <picker mode="date" value="{{endDate}}" bindchange="onEndDateChange">
           <view class="time-value">{{endDate}}</view>
         </picker>
-        <picker mode="time" value="{{endDate}}" bindchange="onEndTimeChange">
-          <view class="time-value">改时间</view>
+        <picker mode="time" value="{{endTime}}" bindchange="onEndTimeChange">
+          <view class="time-value">{{endTime}}</view>
         </picker>
       </view>
       <view class="text-hint">值班需求必填起止时间（年月日时分）</view>
