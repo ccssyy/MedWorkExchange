@@ -1,0 +1,90 @@
+<view wx:if="{{loading}}" class="empty text-hint">加载中…</view>
+
+<view wx:elif="{{post}}" class="page-wrap">
+  <view class="container">
+    <view class="card post-card">
+      <view class="post-head">
+        <view class="post-avatar">{{post.author[0]}}</view>
+        <view class="post-meta">
+          <view class="post-author">{{post.author}}</view>
+          <view class="text-hint">{{post.createdAgo}} · {{post.city || '未设置地区'}}</view>
+        </view>
+        <view class="delete-btn" wx:if="{{post.isMine}}" bindtap="onDeletePost">删除</view>
+      </view>
+      <view class="post-title">{{post.title}}</view>
+      <view class="post-content">{{post.content}}</view>
+      <view wx:if="{{post.images.length}}" class="post-images">
+        <image
+          wx:for="{{post.images}}"
+          wx:key="*this"
+          class="post-img"
+          src="{{item}}"
+          mode="aspectFill"
+          data-src="{{item}}"
+          bindtap="onImagePreview"
+        />
+      </view>
+      <view class="post-actions">
+        <view class="like-btn {{post.liked ? 'liked' : ''}}" bindtap="onToggleLike">
+          {{post.liked ? '♥' : '♡'}} {{post.likeCount}}
+        </view>
+        <view class="text-hint" bindtap="onReport">举报</view>
+      </view>
+    </view>
+
+    <view class="section-title">评论（{{post.commentCount}}）</view>
+
+    <view wx:if="{{!comments.length}}" class="empty text-hint">还没有评论，来抢沙发</view>
+
+    <view class="card comment-card" wx:for="{{comments}}" wx:key="_id">
+      <view class="avatar-sm">{{item.author[0]}}</view>
+      <view class="comment-body">
+        <view class="comment-head">
+          <text class="comment-author">{{item.author}}</text>
+          <text class="text-hint">{{item.createdAgo}}</text>
+        </view>
+        <view class="comment-content">{{item.content}}</view>
+        <view class="comment-ops">
+          <text class="op" data-id="{{item._id}}" data-name="{{item.author}}" bindtap="onReplyTap">回复</text>
+          <text wx:if="{{item.isMine}}" class="op op-del" data-id="{{item._id}}" bindtap="onDeleteComment">删除</text>
+        </view>
+
+        <view wx:if="{{item.replies.length}}" class="replies">
+          <view class="reply" wx:for="{{item.replies}}" wx:for-item="reply" wx:key="_id">
+            <view class="reply-head">
+              <text class="comment-author">{{reply.author}}</text>
+              <text class="text-hint">{{reply.createdAgo}}</text>
+            </view>
+            <view class="comment-content">
+              <text wx:if="{{reply.replyToName}}" class="reply-to">@{{reply.replyToName}}</text>
+              {{reply.content}}
+            </view>
+            <view class="comment-ops">
+              <text class="op" data-id="{{item._id}}" data-name="{{reply.author}}" bindtap="onReplyTap">回复</text>
+              <text wx:if="{{reply.isMine}}" class="op op-del" data-id="{{reply._id}}" bindtap="onDeleteComment">删除</text>
+            </view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+
+  <view class="input-bar">
+    <view wx:if="{{replyTarget}}" class="replying-tip" bindtap="cancelReply">
+      回复 {{replyTarget.name}} ✕
+    </view>
+    <view class="input-row">
+      <input
+        class="input-field"
+        placeholder="{{inputPlaceholder}}"
+        value="{{inputText}}"
+        bindinput="onInput"
+        confirm-type="send"
+        bindconfirm="onSend"
+      />
+      <view class="send-btn" bindtap="onSend">发送</view>
+    </view>
+  </view>
+</view>
+
+<view wx:else class="empty text-hint">帖子不存在</view>

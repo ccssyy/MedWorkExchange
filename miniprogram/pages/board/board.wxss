@@ -1,0 +1,147 @@
+.board-filter {
+  display: flex;
+  gap: 16rpx;
+  padding: 16rpx 24rpx;
+  background: #FFFFFF;
+  border-bottom: 1rpx solid #EDF1EF;
+}
+
+.topic-picker {
+  flex-shrink: 0;
+}
+
+.filter-pill {
+  background: #F1F5F3;
+  color: #5F6E6A;
+  font-size: 24rpx;
+  border-radius: 999rpx;
+  padding: 8rpx 24rpx;
+}
+
+.pill-active {
+  background: #0F6E56;
+  color: #FFFFFF;
+}
+
+.empty {
+  text-align: center;
+  padding: 120rpx 0;
+}
+
+.post {
+  display: block;
+}
+
+.post-head {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  margin-bottom: 16rpx;
+}
+
+.post-avatar {
+  width: 64rpx;
+  height: 64rpx;
+  border-radius: 50%;
+  background: #E1F5EE;
+  color: #0F6E56;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28rpx;
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.post-meta {
+  flex: 1;
+  min-width: 0;
+}
+
+.post-author {
+  font-size: 27rpx;
+  font-weight: 500;
+  margin-bottom: 2rpx;
+}
+
+.post-title {
+  font-size: 30rpx;
+  font-weight: 500;
+  margin-bottom: 8rpx;
+}
+
+.post-content {
+  font-size: 26rpx;
+  margin-bottom: 16rpx;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+}
+
+.post-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.post-likes {
+  font-size: 26rpx;
+  color: #7A8B87;
+}
+
+.post-likes.liked {
+  color: #D4537E;
+}
+
+.ad-strip {
+  display: flex;
+  align-items: center;
+  gap: 16rpx;
+  background: #FDFCF7;
+  border: 1rpx solid #F0E6C8;
+  border-radius: 12rpx;
+  padding: 16rpx 24rpx;
+  margin-bottom: 20rpx;
+}
+
+.ad-tag {
+  font-size: 20rpx;
+  color: #854F0B;
+  border: 1rpx solid #E8D9A8;
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+}
+
+.ad-text {
+  font-size: 24rpx;
+  color: #9AA8A4;
+}
+
+.compose-btn {
+  position: fixed;
+  right: 40rpx;
+  bottom: 60rpx;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 104rpx;
+  height: 104rpx;
+  border-radius: 50%;
+  background: #0F6E56;
+  box-shadow: 0 4rpx 16rpx rgba(15, 110, 86, 0.35);
+}
+
+.compose-plus {
+  color: #ffffff;
+  font-size: 44rpx;
+  font-weight: 300;
+  line-height: 1;
+}
+
+.compose-label {
+  color: #ffffff;
+  font-size: 18rpx;
+  margin-top: 2rpx;
+}

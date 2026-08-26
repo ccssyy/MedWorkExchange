@@ -3,8 +3,9 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const ALLOWED_CATEGORIES = ['shift', 'case_guide', 'resume_guide']
+const ALLOWED_CATEGORIES = ['shift', 'case_guide']
 const ALLOWED_TYPES = ['requirement', 'service']
+const ALLOWED_SORTS = ['latest', 'fee_asc', 'fee_desc', 'time_near']
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
@@ -16,19 +17,52 @@ exports.main = async (event) => {
     return found.data[0] || null
   }
 
-  // ── 列表：只返回指定医院的撮合单（隔离只读面）──
+  // ── 列表：多维筛选（D12）——keyword/category/department/time/fee/hospital/province/city/sort ──
   if (action === 'list') {
-    const { hospitalId, category, type, status } = event
-    if (!hospitalId) return { ok: false, message: '缺少 hospitalId' }
-    const where = { hospital_id: hospitalId }
+    const {
+      keyword, category, department, type, status,
+      timeFrom, timeTo, feeMin, feeMax,
+      hospitalId, province, city, sort
+    } = event
+    const where = { status: _.neq('cancelled') }
+    if (hospitalId) where.hospital_id = hospitalId
+    if (province) where.province = province
+    if (city) where.city = city
     if (category && ALLOWED_CATEGORIES.includes(category)) where.category = category
+    if (department) where.department = department
     if (type && ALLOWED_TYPES.includes(type)) where.type = type
     if (status) where.status = status
-    const res = await db.collection('dealings')
-      .where(where)
-      .orderBy('created_at', 'desc')
-      .limit(50)
-      .get()
+    if (timeFrom || timeTo) {
+      where.start_time = {}
+      if (timeFrom) where.start_time = _.gte(new Date(timeFrom))
+      if (timeTo) where.start_time = timeFrom ? _.and(_.gte(new Date(timeFrom)), _.lte(new Date(timeTo))) : _.lte(new Date(timeTo))
+    }
+    if (feeMin != null || feeMax != null) {
+      where.fee = {}
+      if (feeMin != null && feeMax != null) where.fee = _.and(_.gte(Number(feeMin)), _.lte(Number(feeMax)))
+      else if (feeMin != null) where.fee = _.gte(Number(feeMin))
+      else where.fee = _.lte(Number(feeMax))
+    }
+
+    let orderBy = 'created_at', orderDir = 'desc'
+    if (sort === 'fee_asc') { orderBy = 'fee'; orderDir = 'asc' }
+    if (sort === 'fee_desc') { orderBy = 'fee'; orderDir = 'desc' }
+    if (sort === 'time_near') { orderBy = 'start_time'; orderDir = 'asc' }
+
+    // 组装最终查询（keyword 与其他条件 AND + 多字段 OR）
+    const hasKeyword = keyword && String(keyword).trim()
+    let query
+    if (hasKeyword) {
+      const safe = String(keyword).trim().replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      const reg = db.RegExp({ regexp: safe, options: 'i' })
+      query = db.collection('dealings').where(_.and([
+        where,
+        _.or([{ title: reg }, { detail: reg }, { hospital_name: reg }, { department: reg }])
+      ]))
+    } else {
+      query = db.collection('dealings').where(where)
+    }
+    const res = await query.orderBy(orderBy, orderDir).limit(50).get()
     return {
       dealings: res.data.map(d => ({
         _id: d._id,
@@ -37,8 +71,12 @@ exports.main = async (event) => {
         title: d.title,
         detail: d.detail,
         schedule: d.schedule,
+        startTime: d.start_time,
+        endTime: d.end_time,
         fee: d.fee,
         status: d.status,
+        department: d.department,
+        hospitalName: d.hospital_name,
         ownerUid: d.owner_uid,
         createdAt: d.created_at
       }))
@@ -153,7 +191,7 @@ exports.main = async (event) => {
     }
   }
 
-  // ── 创建：必须已认证，hospital_id 只取用户档案，不信请求参数 ──
+  // ── 创建：必须已认证，hospital_id 只取用户档案，不信请求参数（D9 极简发布）──
   if (action === 'create') {
     const user = await getUser()
     if (!user) return { ok: false, code: 'NO_USER', message: '请先登录' }
@@ -161,30 +199,63 @@ exports.main = async (event) => {
       return { ok: false, code: 'NOT_VERIFIED', message: '请先完成医院认证' }
     }
 
-    const { type, category, title, detail, schedule, fee } = event
+    const { type, category, title, detail, fee, startTime, endTime } = event
     if (!ALLOWED_TYPES.includes(type)) return { ok: false, message: '非法类型' }
     if (!ALLOWED_CATEGORIES.includes(category)) return { ok: false, message: '非法类目' }
     if (!title || !String(title).trim()) return { ok: false, message: '标题不能为空' }
-    if (type === 'requirement' && (!schedule || !String(schedule).trim())) {
-      return { ok: false, message: '需求单必须填写时段' }
-    }
     if (fee != null && (!Number.isFinite(Number(fee)) || Number(fee) < 0 || Number(fee) > 100000)) {
       return { ok: false, message: '酬金格式非法' }
     }
+    // 起止时间：值班需求必填且 start < end；病例指导可不填
+    let startT = null, endT = null
+    if (startTime) {
+      startT = new Date(startTime)
+      if (isNaN(startT.getTime())) return { ok: false, message: '开始时间格式非法' }
+    }
+    if (endTime) {
+      endT = new Date(endTime)
+      if (isNaN(endT.getTime())) return { ok: false, message: '结束时间格式非法' }
+    }
+    if (category === 'shift' && (!startT || !endT)) {
+      return { ok: false, message: '值班需求必须选择起止时间' }
+    }
+    if (startT && endT && endT <= startT) {
+      return { ok: false, message: '结束时间必须晚于开始时间' }
+    }
 
-    // TODO(M2): 接入 msgSecCheck 对 title/detail 做内容安全校验，先审后发
+    // 内容安全：标题+说明过 msgSecCheck
+    try {
+      await cloud.openapi.security.msgSecCheck({
+        openid: OPENID,
+        scene: 2,
+        version: 2,
+        content: `${title}\n${detail || ''}`
+      })
+    } catch (e) {
+      if (e.errCode === 87014) {
+        return { ok: false, code: 'RISK_CONTENT', message: '内容含违规信息，请修改后重试' }
+      }
+      console.error('msgSecCheck error', e)
+      return { ok: false, code: 'SEC_CHECK_FAIL', message: '系统繁忙，请稍后重试' }
+    }
 
     const now = new Date()
     const added = await db.collection('dealings').add({
       data: {
         type,
         category,
-        hospital_id: user.hospital_id, // 服务端注入，拒绝前端指定
+        hospital_id: user.hospital_id,   // 服务端注入，拒绝前端指定
+        hospital_name: user.hospitalName || '',
+        province: user.province || '',
+        city: user.city || '',
+        department: user.department || '',
         owner_uid: user._id,
         owner_nickname: user.nickname || '',
         title: String(title).trim().slice(0, 30),
         detail: String(detail || '').trim().slice(0, 500),
-        schedule: String(schedule || '').trim().slice(0, 40),
+        start_time: startT,
+        end_time: endT,
+        schedule: startT && endT ? formatRange(startT, endT) : '',
         fee: fee == null ? null : Number(fee),
         status: 'published',
         accepted_uid: null,
@@ -200,4 +271,10 @@ exports.main = async (event) => {
   }
 
   return { ok: false, message: '未知 action' }
+}
+
+function formatRange(s, e) {
+  const pad = n => String(n).padStart(2, '0')
+  const f = d => `${d.getMonth() + 1}/${d.getDate()} ${pad(d.getHours())}:${pad(d.getMinutes())}`
+  return `${f(s)}-${f(e)}`
 }
