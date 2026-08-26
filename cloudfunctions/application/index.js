@@ -25,10 +25,8 @@ exports.main = async (event) => {
     if (!d || !d.data) return { ok: false, message: '撮合单不存在' }
     const dealing = d.data
 
-    // 医院隔离：申请方必须与撮合单同院（不信前端）
-    if (dealing.hospital_id !== user.hospital_id) {
-      return { ok: false, code: 'CROSS_HOSPITAL', message: '只能申请本院的撮合单' }
-    }
+    // D8：跨院申请放开（规培实习生跨院帮忙是核心场景）
+    // 申请人所属医院/科室写入快照，由发布方自行判断是否接受
     // 不能申请自己的单
     if (dealing.owner_uid === user._id) {
       return { ok: false, message: '不能申请自己发布的撮合单' }
@@ -50,6 +48,8 @@ exports.main = async (event) => {
         dealing_id: dealingId,
         applicant_uid: user._id,
         applicant_nickname: user.nickname || '',
+        applicant_hospital: user.hospitalName || '',
+        applicant_department: user.department || '',
         applicant_credit: user.credit_score == null ? 100 : user.credit_score,
         applicant_completed: (user.stats && user.stats.completed) || 0,
         message: String(message || '').trim().slice(0, 100),
