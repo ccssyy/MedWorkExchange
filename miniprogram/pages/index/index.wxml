@@ -1,46 +1,110 @@
-<view class="hospital-bar" bindtap="onHospitalTap">
-  <view class="hospital-name">{{browsingHospitalName}}</view>
-  <view class="hospital-switch text-hint">切换 ▾</view>
+<view class="search-bar">
+  <view class="search-box">
+    <input
+      class="search-input"
+      placeholder="搜索标题、科室、医院…"
+      value="{{keyword}}"
+      bindinput="onSearchInput"
+      bindconfirm="onSearchConfirm"
+      confirm-type="search"
+    />
+  </view>
+  <view class="filter-btn" bindtap="openDrawer">筛选</view>
 </view>
 
-<view class="category-tabs">
-  <view
-    wx:for="{{categoryTabs}}"
-    wx:key="key"
-    class="category-tab {{activeCategory === item.key ? 'category-tab-active' : ''}}"
-    data-key="{{item.key}}"
-    bindtap="onCategoryTap"
-  >{{item.label}}</view>
+<view class="filter-nav">
+  <picker class="filter-item" range="{{sorts}}" range-key="label" value="{{sortIndex}}" bindchange="onSortChange">
+    <view class="filter-label {{sortIndex > 0 ? 'filter-active' : ''}}">{{sorts[sortIndex].label}} ▾</view>
+  </picker>
+  <picker class="filter-item" range="{{categories}}" range-key="label" value="{{categoryIndex}}" bindchange="onCategoryChange">
+    <view class="filter-label {{categoryIndex > 0 ? 'filter-active' : ''}}">{{categories[categoryIndex].label}} ▾</view>
+  </picker>
+  <picker class="filter-item" range="{{departments}}" value="{{deptIndex}}" bindchange="onDeptChange">
+    <view class="filter-label filter-ellipsis {{deptIndex > 0 ? 'filter-active' : ''}}">{{departments[deptIndex]}} ▾</view>
+  </picker>
+  <picker class="filter-item" range="{{times}}" range-key="label" value="{{timeIndex}}" bindchange="onTimeChange">
+    <view class="filter-label {{timeIndex > 0 ? 'filter-active' : ''}}">时间 ▾</view>
+  </picker>
+  <picker class="filter-item" range="{{fees}}" range-key="label" value="{{feeIndex}}" bindchange="onFeeChange">
+    <view class="filter-label {{feeIndex > 0 ? 'filter-active' : ''}}">价格 ▾</view>
+  </picker>
+</view>
+
+<view wx:if="{{selectedHospital}}" class="active-chips">
+  <view class="chip" bindtap="clearHospital">
+    {{browsingLabel}} ✕
+  </view>
 </view>
 
 <view class="container">
   <view wx:if="{{loading}}" class="empty text-hint">加载中…</view>
 
   <view wx:elif="{{!dealings.length}}" class="empty text-hint">
-    暂无信息，下拉刷新或去发布第一条吧
+    暂无匹配信息，调整筛选或发布第一条
   </view>
 
-  <view
-    wx:else
-    class="card"
-    wx:for="{{dealings}}"
-    wx:key="_id"
-    data-id="{{item._id}}"
-    bindtap="onDealingTap"
-  >
-    <view class="row-head">
-      <view class="tag tag-{{item.category}}">{{item.categoryLabel}}</view>
-      <view class="text-hint">{{item.statusLabel}}</view>
+  <block wx:else>
+    <view wx:if="{{dealings.length > 1}}" class="card ad-slot">
+      <text class="ad-tag">广告</text>
+      <text class="ad-text">广告位招租 · 地域定向</text>
     </view>
-    <view class="title">{{item.title}}</view>
-    <view class="detail text-secondary">{{item.detail}}</view>
-    <view class="row-foot">
-      <view class="text-fee">{{item.feeLabel}}</view>
-      <view class="text-hint">{{item.schedule}}</view>
+
+    <view
+      class="card"
+      wx:for="{{dealings}}"
+      wx:key="_id"
+      data-id="{{item._id}}"
+      bindtap="onDealingTap"
+    >
+      <view class="row-head">
+        <view class="tag tag-{{item.category}}">{{item.categoryLabel}}</view>
+        <view class="text-hint">{{item.statusLabel}}</view>
+      </view>
+      <view class="title">{{item.title}}</view>
+      <view class="detail text-secondary">
+        {{item.hospitalShort}}{{item.department ? ' · ' + item.department : ''}}{{item.schedule ? ' · ' + item.schedule : ''}}
+      </view>
+      <view class="row-foot">
+        <view class="text-fee">{{item.feeLabel}}</view>
+        <view class="text-hint">{{item.startTimeLabel}}</view>
+      </view>
     </view>
-  </view>
+  </block>
 </view>
 
 <view class="fab" bindtap="onFabTap">
   <view class="fab-plus">+</view>
+</view>
+
+<view wx:if="{{drawerOpen}}" class="drawer-mask" bindtap="closeDrawer">
+  <view class="drawer" catchtap="noop">
+    <view class="drawer-title">筛选</view>
+
+    <view class="drawer-section">
+      <view class="drawer-label">医院（支持简称/别名搜索）</view>
+      <input
+        class="drawer-input"
+        placeholder="如：吉大一院"
+        value="{{hospitalKeyword}}"
+        bindinput="onHospitalKeywordInput"
+      />
+      <view
+        class="hospital-option"
+        wx:for="{{hospitalResults}}"
+        wx:key="_id"
+        data-index="{{index}}"
+        bindtap="onPickHospital"
+      >
+        <text>{{item.name}}</text>
+        <text class="text-hint">{{item.province}} {{item.city}}</text>
+      </view>
+      <view wx:if="{{selectedHospital}}" class="chip chip-selected" bindtap="clearHospital">
+        当前：{{browsingLabel}} ✕ 清除
+      </view>
+    </view>
+
+    <view class="drawer-tip text-hint">
+      未选择医院时显示全部；发布仍限本院（认证医院）
+    </view>
+  </view>
 </view>

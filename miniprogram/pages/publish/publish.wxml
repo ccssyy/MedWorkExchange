@@ -1,50 +1,69 @@
 <view class="container">
-  <view class="mode-switch card">
-    <view
-      class="mode-btn {{mode === 'requirement' ? 'mode-btn-active' : ''}}"
-      data-mode="requirement"
-      bindtap="onModeChange"
-    >我需求人（发需求）</view>
-    <view
-      class="mode-btn {{mode === 'service' ? 'mode-btn-active' : ''}}"
-      data-mode="service"
-      bindtap="onModeChange"
-    >我提供服务（挂牌）</view>
-  </view>
-
   <view class="card">
     <picker mode="selector" range="{{categories}}" range-key="label" value="{{categoryIndex}}" bindchange="onCategoryChange">
       <view class="form-row">
-        <text class="form-label">类目</text>
+        <text class="form-label">需求类型</text>
         <text class="form-value">{{categories[categoryIndex].label}} ▾</text>
       </view>
     </picker>
 
     <view class="form-row">
-      <text class="form-label">标题</text>
-      <input class="form-input" placeholder="如：求换 8/28 夜班" value="{{title}}" bindinput="onTitleInput" maxlength="30" />
+      <text class="form-label">医院</text>
+      <text class="form-value text-secondary">{{defaultHospital}}（本院）</text>
     </view>
 
-    <view class="form-row" wx:if="{{mode === 'requirement'}}">
-      <text class="form-label">时段</text>
-      <input class="form-input" placeholder="如：8/28 18:00-次日8:00" value="{{schedule}}" bindinput="onScheduleInput" maxlength="40" />
+    <picker mode="selector" range="{{departments}}" value="{{deptIndex}}" bindchange="onDeptChange">
+      <view class="form-row">
+        <text class="form-label">科室</text>
+        <text class="form-value">{{departments[deptIndex]}} ▾</text>
+      </view>
+    </picker>
+
+    <view class="form-row">
+      <text class="form-label">标题</text>
+      <input class="form-input" placeholder="如：求值 8/28 夜班" value="{{title}}" bindinput="onTitleInput" maxlength="30" />
+    </view>
+
+    <view class="time-block">
+      <view class="time-row">
+        <text class="form-label">开始</text>
+        <picker mode="date" value="{{startDate}}" bindchange="onStartDateChange">
+          <view class="time-value">{{startDate}}</view>
+        </picker>
+        <picker mode="time" value="{{startDate}}" bindchange="onStartTimeChange">
+          <view class="time-value">改时间</view>
+        </picker>
+      </view>
+      <view class="time-row">
+        <text class="form-label">结束</text>
+        <picker mode="date" value="{{endDate}}" bindchange="onEndDateChange">
+          <view class="time-value">{{endDate}}</view>
+        </picker>
+        <picker mode="time" value="{{endDate}}" bindchange="onEndTimeChange">
+          <view class="time-value">改时间</view>
+        </picker>
+      </view>
+      <view class="text-hint">值班需求必填起止时间（年月日时分）</view>
     </view>
 
     <view class="form-row">
-      <text class="form-label">酬金</text>
-      <input class="form-input" type="digit" placeholder="元（选填，线下结清）" value="{{fee}}" bindinput="onFeeInput" />
+      <text class="form-label">价格</text>
+      <view class="fee-wrap">
+        <text class="fee-unit">￥</text>
+        <input class="form-input fee-input" type="digit" placeholder="选填，线下结清" value="{{fee}}" bindinput="onFeeInput" />
+      </view>
     </view>
 
     <view class="form-col">
       <text class="form-label">说明</text>
-      <textarea class="form-textarea" placeholder="补充科室、要求等。病例内容请务必脱敏，禁止出现患者可识别信息" value="{{detail}}" bindinput="onDetailInput" maxlength="500" />
+      <textarea class="form-textarea" placeholder="补充要求等。病例内容请务必脱敏，禁止患者可识别信息" value="{{detail}}" bindinput="onDetailInput" maxlength="500" />
     </view>
   </view>
 
   <view class="compliance text-hint">
     · 酬金由双方线下直接结清，平台不代收代付
-    · 换班需遵守所在医院相关规定，平台仅提供信息撮合
-    · 病例相关内容禁止患者隐私信息
+    · 值班调班需遵守所在医院相关规定
+    · 病例内容禁止患者隐私信息
   </view>
 
   <button class="btn-primary submit-btn" disabled="{{submitting}}" bindtap="onSubmit">

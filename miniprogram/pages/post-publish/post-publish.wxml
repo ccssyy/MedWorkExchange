@@ -1,0 +1,61 @@
+<view class="container">
+  <view class="card">
+    <view class="section-label">选择话题（单选）</view>
+    <view class="topic-wrap">
+      <view
+        wx:for="{{topics}}"
+        wx:key="key"
+        class="topic-pill {{topicIndex === index ? 'topic-active' : ''}}"
+        data-index="{{index}}"
+        bindtap="onTopicTap"
+      >{{item.label}}</view>
+    </view>
+
+    <view wx:if="{{topics[topicIndex].key === 'case_discussion'}}" class="privacy-tip">
+      病例讨论请注意：禁止患者姓名、ID、影像号等可识别信息，务必脱敏后发布
+    </view>
+
+    <view class="form-col">
+      <text class="form-label">标题</text>
+      <input class="title-input" placeholder="30 字内" value="{{title}}" bindinput="onTitleInput" maxlength="30" />
+    </view>
+
+    <view class="form-col">
+      <text class="form-label">正文</text>
+      <textarea class="content-textarea" placeholder="1000 字内，分享你的经验与故事…" value="{{content}}" bindinput="onContentInput" maxlength="1000" />
+    </view>
+
+    <view class="image-block">
+      <view
+        wx:for="{{images}}"
+        wx:key="*this"
+        class="img-thumb"
+        data-index="{{index}}"
+        bindtap="onRemoveImage"
+      >
+        <image class="img-inner" src="{{item}}" mode="aspectFill" />
+        <view class="img-del">✕</view>
+      </view>
+      <view wx:if="{{images.length < 3}}" class="img-add" bindtap="onChooseImage">
+        <view class="img-plus">+</view>
+        <text class="img-count">{{images.length}}/3</text>
+      </view>
+    </view>
+
+    <view class="identity-row">
+      <text>身份显示</text>
+      <view class="identity-opts">
+        <view class="identity-opt {{!isAnonymous ? 'identity-on' : ''}}">实名</view>
+        <view class="identity-opt {{isAnonymous ? 'identity-on' : ''}}" bindtap="onAnonymousToggle">匿名</view>
+      </view>
+    </view>
+  </view>
+
+  <view class="risk-tip">
+    提交即检测：涉政、黄赌毒、暴力及患者隐私等内容将被拦截
+  </view>
+
+  <button class="btn-primary submit-btn" disabled="{{submitting}}" bindtap="onSubmit">
+    {{submitting ? '发布中…' : '发布'}}
+  </button>
+</view>
