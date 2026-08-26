@@ -37,10 +37,10 @@ Page({
   },
 
   goMyDealings() {
-    wx.showToast({ title: '开发中', icon: 'none' })
+    wx.navigateTo({ url: '/pages/my-list/my-list?role=owner' })
   },
 
   goMyApplications() {
-    wx.showToast({ title: '开发中', icon: 'none' })
+    wx.navigateTo({ url: '/pages/my-list/my-list?role=applicant' })
   }
 })

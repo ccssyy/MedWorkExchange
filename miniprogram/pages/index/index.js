@@ -118,6 +118,15 @@ Page({
     wx.stopPullDownRefresh()
   },
 
+  onDealingTap(e) {
+    const id = e.currentTarget.dataset.id
+    wx.navigateTo({ url: `/pages/detail/detail?id=${id}` })
+  },
+
+  onFabTap() {
+    wx.switchTab({ url: '/pages/publish/publish' })
+  },
+
   goLogin() {
     wx.switchTab({ url: '/pages/profile/profile' })
   }
