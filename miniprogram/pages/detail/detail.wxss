@@ -287,3 +287,52 @@
 .flow-btn {
   width: 100%;
 }
+
+/* 互评卡（M3） */
+.review-card .section-title {
+  margin-bottom: 16rpx;
+}
+
+.stars {
+  display: flex;
+  align-items: center;
+  margin-bottom: 16rpx;
+}
+
+.star {
+  font-size: 48rpx;
+  color: #D5DBD9;
+  margin-right: 10rpx;
+}
+
+.star-on {
+  color: #F5A623;
+}
+
+.star-hint {
+  margin-left: 8rpx;
+}
+
+.review-textarea {
+  width: 100%;
+  box-sizing: border-box;
+  min-height: 120rpx;
+  background: #F7F9F8;
+  border-radius: 12rpx;
+  padding: 16rpx;
+  font-size: 26rpx;
+  margin-bottom: 16rpx;
+}
+
+.review-btn {
+  width: 100%;
+}
+
+.review-done {
+  font-size: 28rpx;
+}
+
+.review-received {
+  margin-top: 16rpx;
+  font-size: 24rpx;
+}

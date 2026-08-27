@@ -49,8 +49,44 @@
       >确认完成</button>
     </block>
     <block wx:elif="{{dealing.status === 'completed'}}">
-      <view class="flow-tip text-secondary">已完成，酬金请线下与对方结清；别忘了互相评价</view>
+      <view class="flow-tip text-secondary">已完成，酬金请线下与对方结清</view>
     </block>
+  </view>
+
+  <!-- 互评卡（completed 后双方各评一次） -->
+  <view class="card review-card" wx:if="{{canOperateFlow && dealing.status === 'completed'}}">
+    <view class="section-title">互评</view>
+    <block wx:if="{{!myReview}}">
+      <view class="stars">
+        <text
+          wx:for="{{[1,2,3,4,5]}}"
+          wx:key="*this"
+          class="star {{item <= reviewRating ? 'star-on' : ''}}"
+          data-star="{{item}}"
+          bindtap="onStarTap"
+        >★</text>
+        <text class="text-hint star-hint">{{reviewRating}} 分</text>
+      </view>
+      <textarea
+        class="review-textarea"
+        placeholder="评价内容（选填，100 字内）"
+        value="{{reviewContent}}"
+        bindinput="onReviewInput"
+        maxlength="100"
+      />
+      <button class="btn-primary review-btn" disabled="{{reviewSubmitting}}" bindtap="onSubmitReview">
+        {{reviewSubmitting ? '提交中…' : '提交评价'}}
+      </button>
+    </block>
+    <block wx:else>
+      <view class="review-done">
+        我已评分：<text class="star-on">{{myReview.rating}} 星</text>
+        <text wx:if="{{myReview.content}}" class="text-secondary">「{{myReview.content}}」</text>
+      </view>
+    </block>
+    <view wx:if="{{receivedReview}}" class="review-received text-hint">
+      对方评价：{{receivedReview.rating}} 星{{receivedReview.from ? '（' + receivedReview.from + '）' : ''}}
+    </view>
   </view>
 
   <view wx:if="{{crossHospital}}" class="card cross-card">

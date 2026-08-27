@@ -19,6 +19,10 @@ exports.main = async (event) => {
     if (user.verify_status !== 'verified') {
       return { ok: false, code: 'NOT_VERIFIED', message: '请先完成医院认证' }
     }
+    // 信用分门槛（M3：低于 60 限制申请）
+    if ((user.credit_score == null ? 100 : user.credit_score) < 60) {
+      return { ok: false, code: 'LOW_CREDIT', message: '信用分过低，暂时无法申请（如有误请申诉）' }
+    }
 
     const { dealingId, message } = event
     const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)

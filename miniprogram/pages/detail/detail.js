@@ -22,6 +22,14 @@ Page({
     editEndTime: '',
     editSaving: false,
     canEdit: false,
+    canOperateFlow: false,
+    myCompleteRequested: false,
+    // 互评
+    myReview: null,
+    receivedReview: null,
+    reviewRating: 5,
+    reviewContent: '',
+    reviewSubmitting: false,
     categoryLabelMap: {
       shift: '值班',
       case_guide: '病例指导'
@@ -73,6 +81,10 @@ Page({
         myCompleteRequested: !r.isOwner && isAcceptedParty && !!dealing.completeRequested,
         loading: false
       })
+      // completed 态拉互评状态
+      if (dealing.status === 'completed' && canOperateFlow) {
+        this.loadReviewStatus()
+      }
     }).catch(err => {
       console.error(err)
       this.setData({ loading: false })
@@ -236,6 +248,56 @@ Page({
       }
     } catch (err) {
       wx.showToast({ title: '操作失败，请重试', icon: 'none' })
+    }
+  },
+
+  // ── 互评 ──
+  loadReviewStatus() {
+    wx.cloud.callFunction({
+      name: 'review',
+      data: { action: 'status', dealingId: this.data.id }
+    }).then(res => {
+      const r = res.result || {}
+      if (!r.ok) return
+      this.setData({
+        myReview: r.myReview || null,
+        receivedReview: r.receivedReview || null
+      })
+    }).catch(() => {})
+  },
+
+  onStarTap(e) {
+    this.setData({ reviewRating: Number(e.currentTarget.dataset.star) })
+  },
+
+  onReviewInput(e) {
+    this.setData({ reviewContent: e.detail.value })
+  },
+
+  async onSubmitReview() {
+    if (this.data.reviewSubmitting) return
+    this.setData({ reviewSubmitting: true })
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'review',
+        data: {
+          action: 'submit',
+          dealingId: this.data.id,
+          rating: this.data.reviewRating,
+          content: this.data.reviewContent
+        }
+      })
+      const r = res.result || {}
+      if (r.ok) {
+        wx.showToast({ title: '评价成功', icon: 'success' })
+        this.loadReviewStatus()
+      } else {
+        wx.showToast({ title: r.message || '提交失败', icon: 'none' })
+      }
+    } catch (err) {
+      wx.showToast({ title: '提交失败，请重试', icon: 'none' })
+    } finally {
+      this.setData({ reviewSubmitting: false })
     }
   },
 

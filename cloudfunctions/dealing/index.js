@@ -245,6 +245,10 @@ exports.main = async (event) => {
     if (user.verify_status !== 'verified' || !user.hospital_id) {
       return { ok: false, code: 'NOT_VERIFIED', message: '请先完成医院认证' }
     }
+    // 信用分门槛（M3：低于 60 限制发布）
+    if ((user.credit_score == null ? 100 : user.credit_score) < 60) {
+      return { ok: false, code: 'LOW_CREDIT', message: '信用分过低，暂时无法发布（如有误请申诉）' }
+    }
 
     const { type, category, title, detail, fee, startTime, endTime } = event
     if (!ALLOWED_TYPES.includes(type)) return { ok: false, message: '非法类型' }
