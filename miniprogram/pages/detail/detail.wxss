@@ -273,3 +273,17 @@
   color: #FFFFFF;
   font-size: 28rpx;
 }
+
+/* 履约流程操作区（M3） */
+.flow-card {
+  border-left: 6rpx solid #0F6E56;
+}
+
+.flow-tip {
+  font-size: 26rpx;
+  margin-bottom: 20rpx;
+}
+
+.flow-btn {
+  width: 100%;
+}

@@ -58,6 +58,10 @@ Page({
       dealing.feeLabel = dealing.fee ? `${dealing.fee} 元（线下与对方结清）` : '面议'
       // 编辑可用性：本人 + published/applied 状态
       const canEdit = !!r.isOwner && ['published', 'applied'].includes(dealing.status)
+      // 履约操作区：撮合双方 + confirmed/in_progress/completed 状态
+      const isAcceptedParty = !!r.isAcceptedParty
+      const canOperateFlow = (r.isOwner || isAcceptedParty) &&
+        ['confirmed', 'in_progress', 'completed'].includes(dealing.status)
       this.setData({
         dealing,
         isOwner: !!r.isOwner,
@@ -65,6 +69,8 @@ Page({
         applications: r.applications || [],
         myApplication: r.myApplication || null,
         canEdit,
+        canOperateFlow,
+        myCompleteRequested: !r.isOwner && isAcceptedParty && !!dealing.completeRequested,
         loading: false
       })
     }).catch(err => {
@@ -158,6 +164,78 @@ Page({
       }
     } catch (err) {
       wx.showToast({ title: '取消失败', icon: 'none' })
+    }
+  },
+
+  // ── 履约流程 ──
+  async onStartService() {
+    const confirmRes = await new Promise(resolve => {
+      wx.showModal({ title: '开始履约', content: '确认已开始履约？', success: resolve })
+    })
+    if (!confirmRes.confirm) return
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'dealing',
+        data: { action: 'startService', dealingId: this.data.id }
+      })
+      const r = res.result || {}
+      if (r.ok) {
+        wx.showToast({ title: '已开始履约', icon: 'success' })
+        this.loadDetail()
+      } else {
+        wx.showToast({ title: r.message || '操作失败', icon: 'none' })
+      }
+    } catch (err) {
+      wx.showToast({ title: '操作失败，请重试', icon: 'none' })
+    }
+  },
+
+  async onCompleteService() {
+    const isOwner = this.data.isOwner
+    const confirmRes = await new Promise(resolve => {
+      wx.showModal({
+        title: isOwner ? '确认完成' : '申请确认完成',
+        content: isOwner ? '确认对方已履约完成？酬金请线下结清' : '向发布方提交完成申请，核实后由发布方确认',
+        success: resolve
+      })
+    })
+    if (!confirmRes.confirm) return
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'dealing',
+        data: { action: 'completeService', dealingId: this.data.id }
+      })
+      const r = res.result || {}
+      if (r.ok) {
+        wx.showToast({ title: r.completed ? '已完成' : '已提交申请', icon: 'success' })
+        this.loadDetail()
+      } else {
+        wx.showToast({ title: r.message || '操作失败', icon: 'none' })
+      }
+    } catch (err) {
+      wx.showToast({ title: '操作失败，请重试', icon: 'none' })
+    }
+  },
+
+  async onConfirmComplete() {
+    const confirmRes = await new Promise(resolve => {
+      wx.showModal({ title: '确认完成', content: '确认对方已履约完成？', success: resolve })
+    })
+    if (!confirmRes.confirm) return
+    try {
+      const res = await wx.cloud.callFunction({
+        name: 'dealing',
+        data: { action: 'confirmComplete', dealingId: this.data.id }
+      })
+      const r = res.result || {}
+      if (r.ok) {
+        wx.showToast({ title: '已完成', icon: 'success' })
+        this.loadDetail()
+      } else {
+        wx.showToast({ title: r.message || '操作失败', icon: 'none' })
+      }
+    } catch (err) {
+      wx.showToast({ title: '操作失败，请重试', icon: 'none' })
     }
   },
 
