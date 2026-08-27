@@ -56,6 +56,7 @@ async function main() {
         name: 'initdb',
         data: {
           action: 'seedApplication',
+          testKey: 'mwe-test-only',
           dealingId: did,
           nickname: nick,
           hospital: '吉林大学第二医院',
@@ -131,7 +132,7 @@ async function main() {
     return new Promise(resolve => {
       wx.cloud.callFunction({
         name: 'initdb',
-        data: { action: 'cleanTestApplication' }
+        data: { action: 'cleanTestApplication', testKey: 'mwe-test-only' }
       }).then(r => resolve(r.result)).catch(e => resolve({ ok: false }))
     })
   }, dealingId)
@@ -155,7 +156,7 @@ async function main() {
   async function cleanupAndFinish(mpi, did) {
     try {
       await mpi.evaluate(() => new Promise(res =>
-        wx.cloud.callFunction({ name: 'initdb', data: { action: 'cleanTestApplication' } })
+        wx.cloud.callFunction({ name: 'initdb', data: { action: 'cleanTestApplication', testKey: 'mwe-test-only' } })
           .then(r => res(r.result)).catch(() => res(null))))
       console.log('清理: 测试申请记录已删')
     } catch (e) {}

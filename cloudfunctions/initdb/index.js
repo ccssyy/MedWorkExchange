@@ -22,10 +22,19 @@ const departments = [
   '肿瘤科', '康复科', '全科', '其他'
 ]
 
+// 测试辅助 action 口令（防误触发；云函数环境变量可覆盖，非安全边界）
+const TEST_KEY = process.env.TEST_KEY || 'mwe-test-only'
+
 exports.main = async (event = {}) => {
   const logs = []
 
-  // ── 测试辅助：构造/清理"账号B申请"（降级验证 A10/A12 用，验收后删除）──
+  // ── 测试辅助 action 统一入口校验 ──
+  const TEST_ACTIONS = ['seedApplication', 'cleanTestApplication', 'peek']
+  if (TEST_ACTIONS.includes(event.action) && event.testKey !== TEST_KEY) {
+    return { ok: false, code: 'FORBIDDEN', message: 'test actions require testKey' }
+  }
+
+  // ── 测试辅助：构造/清理"账号B申请"（降级验证 A10/A12 用）──
   if (event.action === 'seedApplication') {
     const { dealingId, nickname, hospital, department, message } = event
     const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
