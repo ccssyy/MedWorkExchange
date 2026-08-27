@@ -35,6 +35,8 @@ feature/* 里程碑/功能开发分支：从 develop 切出，完成后合回 de
 
 ## 当前状态
 
-- main @ ae7a103（M1 骨架 = v0.1.0）
-- develop @ ae7a103
-- feature/m2-matching-flow（进行中）：申请/确认状态机、超时任务、搜索筛选
+- main @ 261f5da（tag v0.2.0 = M2 + v1.1 验收通过，2026-08-27）
+- develop @ d9f9cf4（与 main 同内容，验收体系已入库）
+- 已合并分支：feature/m2-matching-flow、feature/v1.1-requirement-changes
+- 下一步：M3（私信收发 + 订阅消息 + 履约确认 + 互评信用分），从 develop 切 `feature/m3-*`
+- 注意：cloudfunctions/initdb 含测试辅助 action（seedApplication/cleanTestApplication/peek），M3 开工前移除或加环境开关
