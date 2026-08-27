@@ -22,8 +22,54 @@ const departments = [
   '肿瘤科', '康复科', '全科', '其他'
 ]
 
-exports.main = async () => {
+exports.main = async (event = {}) => {
   const logs = []
+
+  // ── 测试辅助：构造/清理"账号B申请"（降级验证 A10/A12 用，验收后删除）──
+  if (event.action === 'seedApplication') {
+    const { dealingId, nickname, hospital, department, message } = event
+    const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
+    if (!d || !d.data) return { ok: false, message: '撮合单不存在' }
+    const now = new Date()
+    const add = await db.collection('applications').add({
+      data: {
+        dealing_id: dealingId,
+        applicant_uid: 'TEST_USER_B',
+        applicant_nickname: nickname || '测试B',
+        applicant_hospital: hospital || '吉林大学第二医院',
+        applicant_department: department || '呼吸内科',
+        applicant_credit: 100,
+        applicant_completed: 0,
+        message: String(message || '').slice(0, 100),
+        status: 'pending',
+        created_at: now,
+        updated_at: now
+      }
+    })
+    await db.collection('dealings').doc(dealingId).update({
+      data: { status: 'applied', updated_at: now }
+    })
+    return { ok: true, applicationId: add._id }
+  }
+
+  if (event.action === 'cleanTestApplication') {
+    const r = await db.collection('applications')
+      .where({ applicant_uid: 'TEST_USER_B' })
+      .remove()
+    return { ok: true, removed: (r.stats && r.stats.removed) || 0 }
+  }
+
+  // ── 测试辅助：读库核查（C 组用例，只读）──
+  if (event.action === 'peek') {
+    const { collection, where, orderField, orderDir, limit } = event
+    const allowed = ['dealings', 'audit_logs', 'posts', 'applications']
+    if (!allowed.includes(collection)) return { ok: false, message: 'collection not allowed' }
+    let q = db.collection(collection)
+    if (where) q = q.where(where)
+    if (orderField) q = q.orderBy(orderField, orderDir === 'asc' ? 'asc' : 'desc')
+    const res = await q.limit(Math.min(limit || 10, 50)).get()
+    return { ok: true, data: res.data }
+  }
 
   for (const name of collections) {
     try {
