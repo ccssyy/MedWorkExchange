@@ -34,6 +34,9 @@ NODE_PATH=$PWD/node_modules node /Users/samchen/Work/git/MedWorkExchange/test/au
 | verify_b4b6.js | B4 病例话题红条 / B6 点赞轮询复测版 |
 | verify_a10.js | A9-A12 降级验证：`initdb.seedApplication` 构造账号B申请 → A10 确认撮合全链 / A12-A 我的发布，结束自动清理 |
 | verify_v2.js | 需求单发布→编辑→下架→隐私拦截 全链 |
+| verify_m3_chat.js | M3 模块1：发布→seed→确认→会话列表→聊天页收发→导流拦截→markRead |
+| verify_m3_flow.js | M3 模块2：确认→开始履约→确认完成（含 completed 态重复完成被拒） |
+| verify_m3_review.js | M3 模块3+4：互评卡渲染/提交/防重 + status 回读（黑名单/隐私拦截单独补测） |
 
 ## 关键经验（踩坑记录）
 
@@ -46,6 +49,9 @@ NODE_PATH=$PWD/node_modules node /Users/samchen/Work/git/MedWorkExchange/test/au
 - 双账号用例（A9-A12 部分环节、B5 的对端视角）需真机第二微信，automator 只能控制当前登录账号。
   - 单账号替代方案：`initdb` 云函数已加 `seedApplication` / `cleanTestApplication` action，可构造 `applicant_uid='TEST_USER_B'` 的申请记录驱动 A 端流程；A 端真实、B 端操作过程 N/A。
 - my-list 页数据字段是 `list`（不是 items）；automator `mp.evaluate(fn, ...args)` 支持向 appService 传参执行 Promise。
+- **mock showModal 必须在连接后立刻设置**——onAccept 等处理器里 await showModal，漏 mock 会永久挂起（M3 chat 首跑教训）。
+- 全局配置改动（app.json 注册新页面/tabBar）热重载不可靠，需 `cli close` + `/v2/auto` 重开触发全量编译（tabBar 显示 M1 旧配置即此因）。
+- `cli cloud functions deploy --names` 逗号分隔多函数在该 IDE 版本不生效，逐个部署。
 
 ## 环境常量
 
