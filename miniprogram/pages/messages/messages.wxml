@@ -5,11 +5,13 @@
     暂无会话，撮合确认后可与对方站内沟通
   </view>
 
-  <view wx:else class="card conv" wx:for="{{conversations}}" wx:key="_id">
-    <view class="conv-info">
-      <view class="conv-title">{{item.dealingTitle}}</view>
-      <view class="conv-last text-secondary">{{item.lastMessage}}</view>
+  <block wx:else>
+    <view class="card conv" wx:for="{{conversations}}" wx:key="_id">
+      <view class="conv-info">
+        <view class="conv-title">{{item.dealingTitle}}</view>
+        <view class="conv-last text-secondary">{{item.lastMessage}}</view>
+      </view>
+      <view class="conv-time text-hint">{{item.lastTimeLabel}}</view>
     </view>
-    <view class="conv-time text-hint">{{item.lastTimeLabel}}</view>
-  </view>
+  </block>
 </view>

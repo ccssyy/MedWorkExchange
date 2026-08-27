@@ -1,0 +1,23 @@
+.empty {
+  text-align: center;
+  padding: 120rpx 0;
+}
+
+.row-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12rpx;
+}
+
+.title {
+  font-size: 30rpx;
+  font-weight: 500;
+  margin-bottom: 12rpx;
+}
+
+.row-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}

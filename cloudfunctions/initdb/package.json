@@ -1,0 +1,9 @@
+{
+  "name": "initdb",
+  "version": "1.0.0",
+  "description": "数据库初始化：建集合/预置医院别名/科室字典",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^4.0.2"
+  }
+}

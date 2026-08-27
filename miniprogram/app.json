@@ -1,14 +1,19 @@
 {
   "pages": [
     "pages/index/index",
+    "pages/board/board",
     "pages/publish/publish",
     "pages/messages/messages",
-    "pages/profile/profile"
+    "pages/profile/profile",
+    "pages/detail/detail",
+    "pages/my-list/my-list",
+    "pages/post-publish/post-publish",
+    "pages/post-detail/post-detail"
   ],
   "window": {
     "navigationBarBackgroundColor": "#0F6E56",
     "navigationBarTextStyle": "white",
-    "navigationBarTitleText": "医班互换",
+    "navigationBarTitleText": "医班互助",
     "backgroundColor": "#F6F7F9",
     "backgroundTextStyle": "dark"
   },
@@ -20,9 +25,15 @@
     "list": [
       {
         "pagePath": "pages/index/index",
-        "text": "首页",
+        "text": "需求",
         "iconPath": "assets/tab-home.png",
         "selectedIconPath": "assets/tab-home-active.png"
+      },
+      {
+        "pagePath": "pages/board/board",
+        "text": "留言板",
+        "iconPath": "assets/tab-board.png",
+        "selectedIconPath": "assets/tab-board-active.png"
       },
       {
         "pagePath": "pages/publish/publish",

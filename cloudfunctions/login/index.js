@@ -19,15 +19,18 @@ exports.main = async (event) => {
       return { user: maskUser(found.data[0]) }
     }
     const now = new Date()
-    const created = await users.add({
+    await users.add({
       data: {
         openid: OPENID,
         nickname: '',
         avatar: '',
         phone: '',
-        role: 'student',
+        role: 'student',          // student=规培实习生 / doctor=正职医生
         hospital_id: null,
         hospitalName: '',
+        province: '',
+        city: '',
+        department: '',           // 标准科室字典值（dept-picker）
         verify_status: 'none',
         verify_material: null,
         credit_score: 100,
@@ -36,7 +39,22 @@ exports.main = async (event) => {
         updated_at: now
       }
     })
-    return { uid: created._id, created: true }
+    return { created: true }
+  }
+
+  // 更新基础资料（昵称/科室/角色；医院归属变更需走认证审核）
+  if (action === 'updateProfile') {
+    const found = await users.where({ openid: OPENID }).get()
+    if (!found.data.length) return { ok: false, message: '请先登录' }
+    const user = found.data[0]
+    const patch = {}
+    if (event.nickname != null) patch.nickname = String(event.nickname).trim().slice(0, 20)
+    if (event.department != null) patch.department = String(event.department).slice(0, 30)
+    if (event.role != null && ['student', 'doctor'].includes(event.role)) patch.role = event.role
+    if (!Object.keys(patch).length) return { ok: false, message: '无可更新字段' }
+    patch.updated_at = new Date()
+    await users.doc(user._id).update({ data: patch })
+    return { ok: true }
   }
 
   return { ok: false, message: '未知 action' }
@@ -50,6 +68,9 @@ function maskUser(u) {
     role: u.role,
     hospitalId: u.hospital_id,
     hospitalName: u.hospitalName,
+    province: u.province || '',
+    city: u.city || '',
+    department: u.department || '',
     verifyStatus: u.verify_status || 'none',
     creditScore: u.credit_score == null ? 100 : u.credit_score,
     stats: u.stats || { published: 0, accepted: 0, completed: 0 }

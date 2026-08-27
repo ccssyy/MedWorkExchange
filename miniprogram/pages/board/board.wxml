@@ -1,0 +1,44 @@
+<view class="board-filter">
+  <picker class="topic-picker" range="{{topics}}" range-key="label" value="{{topicIndex}}" bindchange="onTopicChange">
+    <view class="filter-pill {{topicIndex > 0 ? 'pill-active' : ''}}">话题：{{topics[topicIndex].label}} ▾</view>
+  </picker>
+  <picker range="{{times}}" range-key="label" value="{{timeIndex}}" bindchange="onTimeChange">
+    <view class="filter-pill {{timeIndex < 2 ? 'pill-active' : ''}}">{{times[timeIndex].label}} ▾</view>
+  </picker>
+</view>
+
+<view class="container">
+  <view wx:if="{{loading}}" class="empty text-hint">加载中…</view>
+
+  <view wx:elif="{{!posts.length}}" class="empty text-hint">
+    暂无帖子，来发第一帖吧
+  </view>
+
+  <block wx:else>
+    <view class="card post" wx:for="{{posts}}" wx:key="_id" data-id="{{item._id}}" bindtap="onPostTap">
+      <view class="post-head">
+        <view class="post-avatar">{{item.author[0]}}</view>
+        <view class="post-meta">
+          <view class="post-author">{{item.author}}</view>
+          <view class="text-hint">{{item.createdAgo}} · {{item.city || '未设置地区'}}</view>
+        </view>
+      </view>
+      <view class="post-title">{{item.title}}</view>
+      <view class="post-content text-secondary">{{item.content}}</view>
+      <view class="post-foot">
+        <view class="post-likes {{item.liked ? 'liked' : ''}}">{{item.liked ? '♥' : '♡'}} {{item.likeCount}}</view>
+        <view class="text-hint">评论 {{item.commentCount}}</view>
+      </view>
+    </view>
+
+    <view wx:if="{{posts.length > 3}}" class="ad-strip">
+      <text class="ad-tag">广告</text>
+      <text class="ad-text">广告位招租 · 地域定向</text>
+    </view>
+  </block>
+</view>
+
+<view class="compose-btn" bindtap="onComposeTap">
+  <view class="compose-plus">+</view>
+  <text class="compose-label">发帖</text>
+</view>
