@@ -32,7 +32,8 @@ Page({
     reviewSubmitting: false,
     categoryLabelMap: {
       shift: '值班',
-      case_guide: '病例指导'
+      case_guide: '病例指导',
+      escort: '陪诊'
     },
     statusLabelMap: {
       published: '待接单',

@@ -64,6 +64,7 @@
     · 酬金由双方线下直接结清，平台不代收代付
     · 值班调班需遵守所在医院相关规定
     · 病例内容禁止患者隐私信息
+    · 陪诊仅限陪同就诊/代办跑腿/取报告等协助服务，禁止加号、插队等违规行为
   </view>
 
   <button class="btn-primary submit-btn" disabled="{{submitting}}" bindtap="onSubmit">

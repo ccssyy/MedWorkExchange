@@ -2,6 +2,7 @@ Page({
   data: {
     id: '',
     post: null,
+    gated: false,
     comments: [],
     loading: true,
     inputText: '',
@@ -13,7 +14,6 @@ Page({
   onLoad(options) {
     this.setData({ id: options.id || '' })
     this.loadPost()
-    this.loadComments()
   },
 
   loadPost() {
@@ -21,9 +21,20 @@ Page({
       name: 'posts',
       data: { action: 'getPost', postId: this.data.id }
     }).then(res => {
-      const post = (res.result && res.result.post) || null
+      const r = res.result || {}
+      const post = r.post || null
+      // 分级可见性：病例讨论帖对未认证用户锁定
+      if (r.gated) {
+        this.setData({ gated: true, loading: false })
+        return
+      }
       this.setData({ post, loading: false })
+      this.loadComments()
     }).catch(() => this.setData({ loading: false }))
+  },
+
+  onGoVerify() {
+    wx.switchTab({ url: '/pages/profile/profile' })
   },
 
   loadComments() {

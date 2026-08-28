@@ -4,7 +4,8 @@ Page({
   data: {
     categories: [
       { key: 'shift', label: '值班' },
-      { key: 'case_guide', label: '病例指导' }
+      { key: 'case_guide', label: '病例指导' },
+      { key: 'escort', label: '陪诊' }
     ],
     categoryIndex: 0,
     // 默认值：用户档案（认证医院/科室），可改科室

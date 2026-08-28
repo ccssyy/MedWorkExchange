@@ -3,7 +3,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const ALLOWED_CATEGORIES = ['shift', 'case_guide']
+const ALLOWED_CATEGORIES = ['shift', 'case_guide', 'escort']
 const ALLOWED_TYPES = ['requirement', 'service']
 const ALLOWED_SORTS = ['latest', 'fee_asc', 'fee_desc', 'time_near']
 
