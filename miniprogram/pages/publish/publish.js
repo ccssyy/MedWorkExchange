@@ -9,6 +9,7 @@ Page({
     ],
     categoryIndex: 0,
     // 默认值：用户档案（认证医院/科室），可改科室
+    isPatient: false,
     defaultHospital: '',
     departments: [],
     deptIndex: 0,
@@ -40,11 +41,19 @@ Page({
         '精神科', '皮肤科', '眼科', '耳鼻喉科', '口腔科', '放射科', '超声科', '检验科', '病理科',
         '肿瘤科', '康复科', '全科', '其他']
       const deptIdx = user && user.department ? Math.max(0, depts.indexOf(user.department)) : 0
-      this.setData({
-        defaultHospital: user ? (user.hospitalName || '未认证') : '未登录',
+      // 患者角色：仅陪诊需求单，科室隐藏
+      const isPatient = !!(user && user.isPatient)
+      const patch = {
+        defaultHospital: user ? (user.hospitalName || (isPatient ? '患者/家属' : '未认证')) : '未登录',
         departments: depts,
-        deptIndex: deptIdx
-      })
+        deptIndex: deptIdx,
+        isPatient
+      }
+      if (isPatient) {
+        patch.categories = [{ key: 'escort', label: '陪诊' }]
+        patch.categoryIndex = 0
+      }
+      this.setData(patch)
     })
   },
 
@@ -67,10 +76,11 @@ Page({
       return wx.showToast({ title: '请填写标题', icon: 'none' })
     }
     const user = app.globalData.userInfo
-    if (!user || user.verifyStatus !== 'verified') {
+    const isPatient = !!(user && user.isPatient)
+    if (!user || (!isPatient && user.verifyStatus !== 'verified')) {
       return wx.showModal({
-        title: '需要先认证',
-        content: '发布前请先完成医院认证（我的-医院认证）',
+        title: isPatient ? '需要激活患者身份' : '需要先认证',
+        content: isPatient ? '发布陪诊需求前请先完成患者身份激活（我的-身份认证）' : '发布前请先完成医院认证（我的-身份认证）',
         showCancel: false,
         success: () => wx.switchTab({ url: '/pages/profile/profile' })
       })

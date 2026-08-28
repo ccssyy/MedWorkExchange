@@ -16,6 +16,10 @@ exports.main = async (event) => {
   if (action === 'apply') {
     const user = await getUser()
     if (!user) return { ok: false, code: 'NO_USER', message: '请先登录' }
+    // 患者角色只能发单/确认，不能申请接单
+    if (user.role === 'patient') {
+      return { ok: false, code: 'PATIENT_FORBIDDEN', message: '患者身份仅可发布陪诊需求，不能接单' }
+    }
     if (user.verify_status !== 'verified') {
       return { ok: false, code: 'NOT_VERIFIED', message: '请先完成医院认证' }
     }

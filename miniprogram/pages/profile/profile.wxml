@@ -1,21 +1,23 @@
 <view class="container">
   <view class="card user-card">
-    <view class="avatar">{{user ? '医' : '?'}}</view>
+    <view class="avatar">{{user ? (user.isPatient ? '患' : '医') : '?'}}</view>
     <view class="user-info">
-      <view class="user-name">{{user ? (user.nickname || '医学生') : '未登录'}}</view>
-      <view class="text-secondary" wx:if="{{user}}">信用分 {{user.creditScore || 100}}</view>
+      <view class="user-name">{{user ? (user.nickname || (user.isPatient ? '患者/家属' : '医学生')) : '未登录'}}</view>
+      <view class="text-secondary" wx:if="{{user && !user.isPatient}}">信用分 {{user.creditScore || 100}}</view>
+      <view class="text-secondary" wx:if="{{user && user.isPatient}}">患者/家属身份</view>
     </view>
   </view>
 
   <view class="card verify-card" bindtap="goVerify">
     <view class="verify-row">
       <view>
-        <view class="verify-title">医院认证</view>
+        <view class="verify-title">{{user && user.isPatient ? '患者身份信息' : '身份认证'}}</view>
         <view class="text-hint" wx:if="{{user && user.hospitalName}}">{{user.hospitalName}}</view>
-        <view class="text-hint" wx:else>认证后可发布与接单</view>
+        <view class="text-hint" wx:elif="{{user && user.isPatient}}">{{user.phoneMasked || '未激活'}} · 可发布陪诊需求</view>
+        <view class="text-hint" wx:else>医务认证后可发布与接单；患者/家属可发陪诊需求</view>
       </view>
-      <view class="tag {{user && user.verifyStatus === 'verified' ? 'tag-shift' : ''}}">
-        {{user ? verifyStatusLabelMap[user.verifyStatus || 'none'] : '未登录'}}
+      <view class="tag {{user && (user.verifyStatus === 'verified' || user.isPatient) ? 'tag-escort' : ''}}">
+        {{user ? (user.isPatient ? '患者' : verifyStatusLabelMap[user.verifyStatus || 'none']) : '未登录'}}
       </view>
     </view>
   </view>
@@ -25,7 +27,7 @@
       <text>我的发布</text>
       <text class="text-hint">›</text>
     </view>
-    <view class="menu-item" bindtap="goMyApplications">
+    <view class="menu-item" wx:if="{{!user || !user.isPatient}}" bindtap="goMyApplications">
       <text>我的申请</text>
       <text class="text-hint">›</text>
     </view>

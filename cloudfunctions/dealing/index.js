@@ -242,6 +242,53 @@ exports.main = async (event) => {
   if (action === 'create') {
     const user = await getUser()
     if (!user) return { ok: false, code: 'NO_USER', message: '请先登录' }
+
+    // 患者角色：仅允许发陪诊需求单（免医院认证，需手机号+实名已激活）
+    if (user.role === 'patient') {
+      const { category: pc, title: pt } = event
+      if (pc !== 'escort') {
+        return { ok: false, code: 'PATIENT_FORBIDDEN', message: '患者身份仅可发布陪诊需求' }
+      }
+      if (user.verify_status === 'none' && !user.phone) {
+        return { ok: false, code: 'PATIENT_NOT_ACTIVE', message: '请先完成患者身份激活' }
+      }
+      if ((user.credit_score == null ? 100 : user.credit_score) < 60) {
+        return { ok: false, code: 'LOW_CREDIT', message: '信用分过低，暂时无法发布' }
+      }
+      const pt2 = String(pt || '').trim()
+      if (!pt2) return { ok: false, message: '标题不能为空' }
+      const now = new Date()
+      const added = await db.collection('dealings').add({
+        data: {
+          type: 'requirement',
+          category: 'escort',
+          hospital_id: user.hospital_id || null,   // 患者可能无医院归属，允许 null
+          hospital_name: user.hospitalName || '',
+          province: user.province || '',
+          city: user.city || '',
+          department: user.department || '',
+          owner_uid: user._id,
+          owner_nickname: user.nickname || '患者用户',
+          owner_role: 'patient',
+          title: pt2.slice(0, 30),
+          detail: String(event.detail || '').trim().slice(0, 500),
+          start_time: null,
+          end_time: null,
+          schedule: '',
+          fee: event.fee == null ? null : Number(event.fee),
+          status: 'published',
+          accepted_uid: null,
+          accept_deadline: null,
+          created_at: now,
+          updated_at: now
+        }
+      })
+      await db.collection('users').doc(user._id).update({
+        data: { 'stats.published': _.inc(1), updated_at: now }
+      })
+      return { ok: true, dealingId: added._id }
+    }
+
     if (user.verify_status !== 'verified' || !user.hospital_id) {
       return { ok: false, code: 'NOT_VERIFIED', message: '请先完成医院认证' }
     }
