@@ -3,7 +3,7 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const ALLOWED_CATEGORIES = ['shift', 'case_guide']
+const ALLOWED_CATEGORIES = ['shift', 'case_guide', 'escort']
 const ALLOWED_TYPES = ['requirement', 'service']
 const ALLOWED_SORTS = ['latest', 'fee_asc', 'fee_desc', 'time_near']
 
@@ -186,9 +186,11 @@ exports.main = async (event) => {
         ownerNickname: dealing.owner_nickname || '',
         acceptedNickname: dealing.accepted_nickname || '',
         hospitalName: dealing.hospital_name || '',
+        completeRequested: !!dealing.complete_requested,
         createdAt: dealing.created_at
       },
       isOwner,
+      isAcceptedParty: !!(user && dealing.accepted_uid === user._id),
       crossHospital,
       applications: isOwner ? applications : [],
       myApplication: !isOwner && applications.length ? applications[0] : null
@@ -242,6 +244,10 @@ exports.main = async (event) => {
     if (!user) return { ok: false, code: 'NO_USER', message: '请先登录' }
     if (user.verify_status !== 'verified' || !user.hospital_id) {
       return { ok: false, code: 'NOT_VERIFIED', message: '请先完成医院认证' }
+    }
+    // 信用分门槛（M3：低于 60 限制发布）
+    if ((user.credit_score == null ? 100 : user.credit_score) < 60) {
+      return { ok: false, code: 'LOW_CREDIT', message: '信用分过低，暂时无法发布（如有误请申诉）' }
     }
 
     const { type, category, title, detail, fee, startTime, endTime } = event
@@ -372,6 +378,81 @@ exports.main = async (event) => {
     await db.collection('dealings').doc(dealingId).update({
       data: { status: 'cancelled', deleted_at: now, updated_at: now }
     })
+    return { ok: true }
+  }
+
+  // ── 开始履约：confirmed → in_progress（双方均可触发）──
+  if (action === 'startService') {
+    const user = await getUser()
+    if (!user) return { ok: false, message: '请先登录' }
+    const { dealingId } = event
+    const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
+    if (!d || !d.data) return { ok: false, message: '撮合单不存在' }
+    const dealing = d.data
+    const isParty = dealing.owner_uid === user._id || dealing.accepted_uid === user._id
+    if (!isParty) return { ok: false, code: 'FORBIDDEN', message: '仅撮合双方可操作' }
+    if (dealing.status !== 'confirmed') {
+      return { ok: false, message: '当前状态不可开始履约' }
+    }
+    const now = new Date()
+    await db.collection('dealings').doc(dealingId).update({
+      data: { status: 'in_progress', started_at: now, updated_at: now }
+    })
+    return { ok: true }
+  }
+
+  // ── 确认完成：in_progress → completed（发布方确认；接单方申请完成待发布方确认）──
+  if (action === 'completeService') {
+    const user = await getUser()
+    if (!user) return { ok: false, message: '请先登录' }
+    const { dealingId } = event
+    const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
+    if (!d || !d.data) return { ok: false, message: '撮合单不存在' }
+    const dealing = d.data
+    const isParty = dealing.owner_uid === user._id || dealing.accepted_uid === user._id
+    if (!isParty) return { ok: false, code: 'FORBIDDEN', message: '仅撮合双方可操作' }
+    if (dealing.status !== 'in_progress') {
+      return { ok: false, message: '当前状态不可确认完成' }
+    }
+    const now = new Date()
+    if (dealing.owner_uid === user._id) {
+      // 发布方直接确认完成
+      await db.collection('dealings').doc(dealingId).update({
+        data: { status: 'completed', completed_at: now, updated_at: now }
+      })
+      await db.collection('users').doc(dealing.accepted_uid).update({
+        data: { 'stats.completed': _.inc(1), updated_at: now }
+      }).catch(() => {})
+      return { ok: true, completed: true }
+    }
+    // 接单方申请完成 → 打标待发布方确认（状态仍 in_progress，complete_requested=true）
+    await db.collection('dealings').doc(dealingId).update({
+      data: { complete_requested: true, complete_requested_at: now, updated_at: now }
+    })
+    return { ok: true, requested: true }
+  }
+
+  // ── 发布方确认接单方的完成申请 ──
+  if (action === 'confirmComplete') {
+    const user = await getUser()
+    if (!user) return { ok: false, message: '请先登录' }
+    const { dealingId } = event
+    const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
+    if (!d || !d.data) return { ok: false, message: '撮合单不存在' }
+    const dealing = d.data
+    if (dealing.owner_uid !== user._id) {
+      return { ok: false, code: 'FORBIDDEN', message: '仅发布方可确认完成' }
+    }
+    if (dealing.status !== 'in_progress' || !dealing.complete_requested) {
+      return { ok: false, message: '无待确认的完成申请' }
+    }
+    const now = new Date()
+    await db.collection('dealings').doc(dealingId).update({
+      data: { status: 'completed', completed_at: now, complete_requested: false, updated_at: now }
+    })
+    await db.collection('users').doc(dealing.accepted_uid).update({
+      data: { 'stats.completed': _.inc(1), updated_at: now }
+    }).catch(() => {})
     return { ok: true }
   }
 

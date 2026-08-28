@@ -150,7 +150,7 @@ exports.main = async (event) => {
     return { ok: true, postId: added._id }
   }
 
-  // ════════ 帖子列表（D13：话题/时间/省市筛选）════════
+  // ════════ 帖子列表（D13：话题/时间/省市筛选 + 分级可见性）════════
   if (action === 'listPosts') {
     const { topic, days, province, city, lastId } = event
     const where = { status: 'active' }
@@ -172,6 +172,8 @@ exports.main = async (event) => {
     const res = await query.orderBy('created_at', 'desc').limit(20).get()
     const user = await getUser()
     const uid = user ? user._id : null
+    // 分级可见性：未认证（或游客）对病例讨论帖只显示标题，正文/图片/作者打码
+    const verified = !!(user && user.verify_status === 'verified')
     // 批量查我的点赞
     let likedSet = new Set()
     if (uid && res.data.length) {
@@ -181,36 +183,66 @@ exports.main = async (event) => {
       likes.data.forEach(l => likedSet.add(l.post_id))
     }
     return {
-      posts: res.data.map(p => ({
-        _id: p._id,
-        topic: p.topic,
-        title: p.title,
-        content: p.content.length > 60 ? p.content.slice(0, 60) + '…' : p.content,
-        images: (p.images || []).length,
-        author: p.is_anonymous ? '匿名用户' : (p.author_snapshot.nickname + (p.author_snapshot.hospitalName ? ' · ' + p.author_snapshot.hospitalName : '')),
-        isAnonymous: p.is_anonymous,
-        likeCount: p.like_count,
-        commentCount: p.comment_count,
-        liked: likedSet.has(p._id),
-        city: p.city,
-        createdAgo: timeAgo(p.created_at)
-      }))
+      posts: res.data.map(p => {
+        const gated = !verified && p.topic === 'case_discussion'
+        return {
+          _id: p._id,
+          topic: p.topic,
+          title: p.title,
+          content: gated ? '' : (p.content.length > 60 ? p.content.slice(0, 60) + '…' : p.content),
+          images: gated ? 0 : (p.images || []).length,
+          gated,
+          author: gated ? '认证后可见' : (p.is_anonymous ? '匿名用户' : (p.author_snapshot.nickname + (p.author_snapshot.hospitalName ? ' · ' + p.author_snapshot.hospitalName : ''))),
+          isAnonymous: p.is_anonymous,
+          likeCount: p.like_count,
+          commentCount: p.comment_count,
+          liked: likedSet.has(p._id),
+          city: p.city,
+          createdAgo: timeAgo(p.created_at)
+        }
+      })
     }
   }
 
-  // ════════ 帖子详情 ════════
+  // ════════ 帖子详情（分级可见性）════════
   if (action === 'getPost') {
     const { postId } = event
     const p = await db.collection('posts').doc(postId).get().catch(() => null)
     if (!p || !p.data || p.data.status !== 'active') return { ok: false, message: '帖子不存在' }
     const post = p.data
     const user = await getUser()
+    // 分级可见性：未认证访问病例讨论帖 → 只给标题与锁定标记
+    const verified = !!(user && user.verify_status === 'verified')
+    const gated = !verified && post.topic === 'case_discussion' && (!user || user._id !== post.author_uid)
+    if (gated) {
+      return {
+        ok: true,
+        gated: true,
+        post: {
+          _id: post._id,
+          topic: post.topic,
+          title: post.title,
+          content: '',
+          images: [],
+          gated: true,
+          author: '认证后可见',
+          isMine: false,
+          likeCount: post.like_count,
+          commentCount: post.comment_count,
+          liked: false,
+          city: post.city,
+          createdAgo: timeAgo(post.created_at)
+        }
+      }
+    }
     let liked = false
     if (user) {
       const l = await db.collection('post_likes').where({ post_id: postId, uid: user._id }).count()
       liked = l.total > 0
     }
     return {
+      ok: true,
+      gated: false,
       post: {
         _id: post._id,
         topic: post.topic,

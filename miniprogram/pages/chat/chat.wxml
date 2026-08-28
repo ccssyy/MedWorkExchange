@@ -1,0 +1,39 @@
+<view class="chat-page">
+  <!-- 撮合单上下文条 -->
+  <view class="ctx-bar text-hint" wx:if="{{dealingTitle}}">关于：{{dealingTitle}}</view>
+
+  <scroll-view class="msg-list" scroll-y scroll-into-view="{{scrollInto}}" scroll-with-animation>
+    <view wx:if="{{loading}}" class="empty text-hint">加载中…</view>
+    <view wx:elif="{{!messages.length}}" class="empty text-hint">还没有消息，打个招呼吧</view>
+
+    <block wx:else>
+      <view wx:if="{{hasMore}}" class="load-more text-hint" bindtap="loadMore">查看更早消息</view>
+      <view
+        wx:for="{{messages}}"
+        wx:key="_id"
+        id="msg-{{item._id}}"
+        class="msg-row {{item.mine ? 'mine' : ''}}"
+      >
+        <view class="bubble {{item.mine ? 'bubble-mine' : 'bubble-other'}}">{{item.content}}</view>
+        <view class="msg-time text-hint">{{item.createdAgo}}</view>
+      </view>
+    </block>
+    <view class="list-bottom"></view>
+  </scroll-view>
+
+  <!-- 底部输入区 -->
+  <view class="input-bar">
+    <view class="input-row">
+      <input
+        class="input-field"
+        placeholder="说点什么…（请勿留联系方式）"
+        value="{{inputText}}"
+        bindinput="onInput"
+        confirm-type="send"
+        bindconfirm="onSend"
+        maxlength="500"
+      />
+      <view class="send-btn {{inputText ? 'send-ready' : ''}}" bindtap="onSend">发送</view>
+    </view>
+  </view>
+</view>

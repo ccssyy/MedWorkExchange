@@ -71,7 +71,7 @@ exports.main = async (event = {}) => {
   // ── 测试辅助：读库核查（C 组用例，只读）──
   if (event.action === 'peek') {
     const { collection, where, orderField, orderDir, limit } = event
-    const allowed = ['dealings', 'audit_logs', 'posts', 'applications']
+    const allowed = ['dealings', 'audit_logs', 'posts', 'applications', 'reviews', 'users']
     if (!allowed.includes(collection)) return { ok: false, message: 'collection not allowed' }
     let q = db.collection(collection)
     if (where) q = q.where(where)

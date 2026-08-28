@@ -29,6 +29,7 @@ page {
 .tag-shift { background: #E1F5EE; color: #0F6E56; }
 .tag-case  { background: #E6F1FB; color: #185FA5; }
 .tag-resume{ background: #FAEEDA; color: #854F0B; }
+.tag-escort{ background: #F3E8F7; color: #6B3FA0; }
 
 .btn-primary {
   background: #0F6E56;

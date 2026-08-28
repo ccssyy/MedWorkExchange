@@ -21,7 +21,71 @@
     </view>
     <view class="owner-ops" wx:if="{{isOwner && dealing.status !== 'cancelled'}}">
       <view class="op-edit" wx:if="{{canEdit}}" bindtap="onEditTap">编辑</view>
-      <view class="op-offshelf" bindtap="onOffShelfTap">下架</view>
+      <view class="op-offshelf" wx:if="{{dealing.status === 'published' || dealing.status === 'applied'}}" bindtap="onOffShelfTap">下架</view>
+    </view>
+  </view>
+
+  <!-- 履约流程操作区（双方可见） -->
+  <view class="card flow-card" wx:if="{{canOperateFlow}}">
+    <block wx:if="{{dealing.status === 'confirmed'}}">
+      <view class="flow-tip text-secondary">已锁定，请线下沟通到岗细节；开始履约后可确认完成</view>
+      <button class="btn-primary flow-btn" bindtap="onStartService">开始履约</button>
+    </block>
+    <block wx:elif="{{dealing.status === 'in_progress'}}">
+      <view class="flow-tip text-secondary" wx:if="{{isOwner && dealing.completeRequested}}">
+        {{dealing.acceptedNickname || '对方'}} 已申请确认完成，请核实后确认
+      </view>
+      <view class="flow-tip text-secondary" wx:elif="{{!isOwner && myCompleteRequested}}">
+        已提交完成申请，等待发布方确认
+      </view>
+      <view class="flow-tip text-secondary" wx:else>履约中，完成后请确认（酬金请线下结清）</view>
+      <button
+        wx:if="{{!(isOwner && dealing.completeRequested) && !(!isOwner && myCompleteRequested)}}"
+        class="btn-primary flow-btn" bindtap="onCompleteService"
+      >{{isOwner ? '确认完成' : '申请确认完成'}}</button>
+      <button
+        wx:if="{{isOwner && dealing.completeRequested}}"
+        class="btn-primary flow-btn" bindtap="onConfirmComplete"
+      >确认完成</button>
+    </block>
+    <block wx:elif="{{dealing.status === 'completed'}}">
+      <view class="flow-tip text-secondary">已完成，酬金请线下与对方结清</view>
+    </block>
+  </view>
+
+  <!-- 互评卡（completed 后双方各评一次） -->
+  <view class="card review-card" wx:if="{{canOperateFlow && dealing.status === 'completed'}}">
+    <view class="section-title">互评</view>
+    <block wx:if="{{!myReview}}">
+      <view class="stars">
+        <text
+          wx:for="{{[1,2,3,4,5]}}"
+          wx:key="*this"
+          class="star {{item <= reviewRating ? 'star-on' : ''}}"
+          data-star="{{item}}"
+          bindtap="onStarTap"
+        >★</text>
+        <text class="text-hint star-hint">{{reviewRating}} 分</text>
+      </view>
+      <textarea
+        class="review-textarea"
+        placeholder="评价内容（选填，100 字内）"
+        value="{{reviewContent}}"
+        bindinput="onReviewInput"
+        maxlength="100"
+      />
+      <button class="btn-primary review-btn" disabled="{{reviewSubmitting}}" bindtap="onSubmitReview">
+        {{reviewSubmitting ? '提交中…' : '提交评价'}}
+      </button>
+    </block>
+    <block wx:else>
+      <view class="review-done">
+        我已评分：<text class="star-on">{{myReview.rating}} 星</text>
+        <text wx:if="{{myReview.content}}" class="text-secondary">「{{myReview.content}}」</text>
+      </view>
+    </block>
+    <view wx:if="{{receivedReview}}" class="review-received text-hint">
+      对方评价：{{receivedReview.rating}} 星{{receivedReview.from ? '（' + receivedReview.from + '）' : ''}}
     </view>
   </view>
 

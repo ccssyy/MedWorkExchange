@@ -45,7 +45,7 @@ Page({
     browsingLabel: '本院',
     dealings: [],
     loading: true,
-    categoryLabelMap: { shift: '值班', case_guide: '病例指导' },
+    categoryLabelMap: { shift: '值班', case_guide: '病例指导', escort: '陪诊' },
     statusLabelMap: {
       published: '待接单', applied: '申请中', confirmed: '已确认',
       in_progress: '履约中', completed: '已完成', cancelled: '已取消', disputed: '争议中'

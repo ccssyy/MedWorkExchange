@@ -1,0 +1,9 @@
+{
+  "name": "review",
+  "version": "1.0.0",
+  "description": "M3 互评：completed 后双向评价，信用分联动",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^4.0.2"
+  }
+}

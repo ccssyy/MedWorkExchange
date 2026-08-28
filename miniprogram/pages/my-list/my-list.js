@@ -6,7 +6,8 @@ Page({
     categoryLabelMap: {
       shift: '换班',
       case_guide: '病例指导',
-      resume_guide: '简历指导'
+      resume_guide: '简历指导',
+      escort: '陪诊'
     },
     statusLabelMap: {
       published: '待接单',
