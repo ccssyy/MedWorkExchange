@@ -29,9 +29,21 @@ exports.main = async (event = {}) => {
   const logs = []
 
   // ── 测试辅助 action 统一入口校验 ──
-  const TEST_ACTIONS = ['seedApplication', 'cleanTestApplication', 'peek']
+  const TEST_ACTIONS = ['seedApplication', 'cleanTestApplication', 'peek', 'setTestUser']
   if (TEST_ACTIONS.includes(event.action) && event.testKey !== TEST_KEY) {
     return { ok: false, code: 'FORBIDDEN', message: 'test actions require testKey' }
+  }
+
+  // ── 测试辅助：设置/更新当前用户的测试字段（is_admin / credit_score 等）──
+  if (event.action === 'setTestUser') {
+    const { OPENID } = cloud.getWXContext()
+    const patch = {}
+    if (typeof event.isAdmin === 'boolean') patch.is_admin = event.isAdmin
+    if (event.creditScore != null) patch.credit_score = Number(event.creditScore)
+    if (!Object.keys(patch).length) return { ok: false, message: 'no patch fields' }
+    const r = await db.collection('users').where({ openid: OPENID })
+      .update({ data: { ...patch, updated_at: new Date() } })
+    return { ok: true, updated: (r.stats && r.stats.updated) || 0, patch }
   }
 
   // ── 测试辅助：构造/清理"账号B申请"（降级验证 A10/A12 用）──
@@ -71,7 +83,7 @@ exports.main = async (event = {}) => {
   // ── 测试辅助：读库核查（C 组用例，只读）──
   if (event.action === 'peek') {
     const { collection, where, orderField, orderDir, limit } = event
-    const allowed = ['dealings', 'audit_logs', 'posts', 'applications', 'reviews', 'users']
+    const allowed = ['dealings', 'audit_logs', 'posts', 'applications', 'reviews', 'users', 'reports', 'messages']
     if (!allowed.includes(collection)) return { ok: false, message: 'collection not allowed' }
     let q = db.collection(collection)
     if (where) q = q.where(where)

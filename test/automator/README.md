@@ -37,6 +37,9 @@ NODE_PATH=$PWD/node_modules node /Users/samchen/Work/git/MedWorkExchange/test/au
 | verify_m3_chat.js | M3 模块1：发布→seed→确认→会话列表→聊天页收发→导流拦截→markRead |
 | verify_m3_flow.js | M3 模块2：确认→开始履约→确认完成（含 completed 态重复完成被拒） |
 | verify_m3_review.js | M3 模块3+4：互评卡渲染/提交/防重 + status 回读（黑名单/隐私拦截单独补测） |
+| verify_escort_gate.js | 陪诊类目 + 病例讨论分级可见性 gate |
+| verify_patient.js | 患者端：患者角色发布 escort 单/禁止接单/激活页渲染 |
+| verify_m4_report.js | M4 举报仲裁：seed B 接单→举报→防重/self 拦截→is_admin 仲裁成立→下架+落库→已办结再仲裁被拒（驳回/真机对端挪双账号补测） |
 
 ## 关键经验（踩坑记录）
 
@@ -48,6 +51,7 @@ NODE_PATH=$PWD/node_modules node /Users/samchen/Work/git/MedWorkExchange/test/au
 - tabbar 页必须 `mp.switchTab()`；确认弹窗提前 `mp.mockWxMethod('showModal',{confirm:true})`。
 - 双账号用例（A9-A12 部分环节、B5 的对端视角）需真机第二微信，automator 只能控制当前登录账号。
   - 单账号替代方案：`initdb` 云函数已加 `seedApplication` / `cleanTestApplication` action，可构造 `applicant_uid='TEST_USER_B'` 的申请记录驱动 A 端流程；A 端真实、B 端操作过程 N/A。
+  - `initdb.setTestUser`（testKey 保护）可给当前登录用户临时设 `is_admin` / `credit_score`，用于仲裁流、信用分门槛等权限类用例；**用例开头先强制重置**再断言，防止上一轮 FATAL 未清理的脏状态（M4 首跑教训：遗留 is_admin=true 导致"非 admin 被拒"用例 FAIL）。
 - my-list 页数据字段是 `list`（不是 items）；automator `mp.evaluate(fn, ...args)` 支持向 appService 传参执行 Promise。
 - **mock showModal 必须在连接后立刻设置**——onAccept 等处理器里 await showModal，漏 mock 会永久挂起（M3 chat 首跑教训）。
 - 全局配置改动（app.json 注册新页面/tabBar）热重载不可靠，需 `cli close` + `/v2/auto` 重开触发全量编译（tabBar 显示 M1 旧配置即此因）。

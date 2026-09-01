@@ -1,11 +1,12 @@
-// 聊天页：历史拉取 + watch 实时监听（失败降级 5s 轮询）
 const app = getApp()
 const db = wx.cloud.database()
+const { reportFlow } = require('../../utils/report')
 
 Page({
   data: {
     conversationId: '',
     dealingTitle: '',
+    otherUid: '',
     messages: [],
     loading: true,
     hasMore: false,
@@ -77,8 +78,24 @@ Page({
 
   loadConvTitle() {
     db.collection('conversations').doc(this.data.conversationId).get().then(res => {
-      if (res.data) this.setData({ dealingTitle: res.data.dealing_title || '' })
+      if (res.data) {
+        const appInst = getApp()
+        const me = appInst.globalData.userInfo && appInst.globalData.userInfo._id
+        const otherUid = res.data.a_uid === me ? res.data.b_uid : res.data.a_uid
+        this.setData({ dealingTitle: res.data.dealing_title || '', otherUid })
+      }
     }).catch(() => {})
+  },
+
+  // ── 举报对方用户 ──
+  async onReportUser() {
+    if (!this.data.otherUid) {
+      // otherUid 未取到时兜底：取最新一条非本人消息的发送方
+      const otherMsg = this.data.messages.find(m => !m.mine)
+      if (!otherMsg) return wx.showToast({ title: '暂无可举报的对象', icon: 'none' })
+      this.setData({ otherUid: otherMsg.fromUid })
+    }
+    await reportFlow('user', this.data.otherUid)
   },
 
   loadMore() {

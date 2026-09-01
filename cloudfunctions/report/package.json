@@ -1,0 +1,9 @@
+{
+  "name": "report",
+  "version": "1.0.0",
+  "description": "M4 举报仲裁：举报提交（三级审核管线）+ 管理员仲裁 + 内容下架 + 信用分联动",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^4.0.2"
+  }
+}
