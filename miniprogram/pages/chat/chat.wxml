@@ -1,6 +1,9 @@
 <view class="chat-page">
-  <!-- 撮合单上下文条 -->
-  <view class="ctx-bar text-hint" wx:if="{{dealingTitle}}">关于：{{dealingTitle}}</view>
+  <!-- 撮合单上下文条 + 举报入口 -->
+  <view class="ctx-bar chat-topbar">
+    <text class="text-hint ctx-title" wx:if="{{dealingTitle}}">关于：{{dealingTitle}}</text>
+    <text class="report-link" bindtap="onReportUser">举报对方</text>
+  </view>
 
   <scroll-view class="msg-list" scroll-y scroll-into-view="{{scrollInto}}" scroll-with-animation>
     <view wx:if="{{loading}}" class="empty text-hint">加载中…</view>

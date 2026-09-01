@@ -19,6 +19,25 @@ page {
   flex-shrink: 0;
 }
 
+.chat-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.ctx-title {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.report-link {
+  color: #999;
+  flex-shrink: 0;
+  text-decoration: underline;
+}
+
 .msg-list {
   flex: 1;
   overflow-y: auto;

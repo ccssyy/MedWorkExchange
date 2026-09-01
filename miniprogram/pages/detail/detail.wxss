@@ -336,3 +336,10 @@
   margin-top: 16rpx;
   font-size: 24rpx;
 }
+
+/* 举报入口 */
+.report-link {
+  color: #999;
+  margin-left: 16rpx;
+  text-decoration: underline;
+}

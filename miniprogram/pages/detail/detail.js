@@ -1,4 +1,5 @@
 const app = getApp()
+const { reportFlow } = require('../../utils/report')
 
 Page({
   data: {
@@ -372,6 +373,11 @@ Page({
     } finally {
       this.setData({ editSaving: false })
     }
+  },
+
+  // ── 举报 ──
+  async onReportTap() {
+    await reportFlow('dealing', this.data.id)
   },
 
   // ── 下架 ──

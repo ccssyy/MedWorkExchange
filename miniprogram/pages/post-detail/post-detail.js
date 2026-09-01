@@ -1,3 +1,5 @@
+const { reportFlow } = require('../../utils/report')
+
 Page({
   data: {
     id: '',
@@ -146,8 +148,9 @@ Page({
     }
   },
 
-  onReport() {
-    wx.showToast({ title: '举报功能即将开放', icon: 'none' })
+  async onReport() {
+    if (!this.data.post) return
+    await reportFlow('post', this.data.id)
   },
 
   onImagePreview(e) {

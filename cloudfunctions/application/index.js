@@ -50,6 +50,35 @@ exports.main = async (event) => {
     }).count()
     if (dup.total > 0) return { ok: false, message: '已申请过，请等待发布方确认' }
 
+    // 内容安全三级管线同源（申请留言会展示给单主）：本地黑名单 + 隐私正则 → msgSecCheck
+    const msg = String(message || '').trim().slice(0, 100)
+    if (msg) {
+      const LOCAL_BLACKLIST = [
+        '法轮功', '赌博', '代开发票', '毒品', '冰毒', '枪支', '买微信号',
+        '加微信', '加V', '微信号', '转账到', '刷单', '代办证书'
+      ]
+      const PRIVACY_PATTERNS = [/\d{17}[\dXx]/, /1[3-9]\d{9}/]
+      for (const w of LOCAL_BLACKLIST) {
+        if (msg.includes(w)) {
+          return { ok: false, code: 'RISK_CONTENT', message: '留言含违规词，请修改' }
+        }
+      }
+      for (const p of PRIVACY_PATTERNS) {
+        if (p.test(msg.replace(/[\s-]/g, ''))) {
+          return { ok: false, code: 'RISK_PRIVACY', message: '留言含手机号/身份证等隐私信息，请修改' }
+        }
+      }
+      try {
+        await cloud.openapi.security.msgSecCheck({
+          openid: OPENID, scene: 2, version: 2, content: msg
+        })
+      } catch (e) {
+        if (e.errCode === 87014) return { ok: false, code: 'RISK_CONTENT', message: '留言含违规信息，请修改' }
+        console.error('msgSecCheck error', e)
+        return { ok: false, code: 'SEC_CHECK_FAIL', message: '系统繁忙，请稍后重试' }
+      }
+    }
+
     const now = new Date()
     await db.collection('applications').add({
       data: {
@@ -60,7 +89,7 @@ exports.main = async (event) => {
         applicant_department: user.department || '',
         applicant_credit: user.credit_score == null ? 100 : user.credit_score,
         applicant_completed: (user.stats && user.stats.completed) || 0,
-        message: String(message || '').trim().slice(0, 100),
+        message: msg,
         status: 'pending',
         created_at: now,
         updated_at: now

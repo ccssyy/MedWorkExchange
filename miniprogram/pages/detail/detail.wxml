@@ -160,6 +160,7 @@
 
   <view class="text-hint compliance">
     酬金由双方线下直接结清，平台不代收代付；换班需遵守所在医院相关规定。
+    <text wx:if="{{!isOwner}}" class="report-link" bindtap="onReportTap">举报</text>
   </view>
 </view>
 
