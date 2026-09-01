@@ -7,12 +7,12 @@
       </view>
     </picker>
 
-    <view class="form-row">
+    <view class="form-row" wx:if="{{!isPatient}}">
       <text class="form-label">医院</text>
-      <text class="form-value text-secondary">{{defaultHospital}}（本院）</text>
+      <text class="form-value text-secondary">{{defaultHospital}}{{isPatient ? '' : '（本院）'}}</text>
     </view>
 
-    <picker mode="selector" range="{{departments}}" value="{{deptIndex}}" bindchange="onDeptChange">
+    <picker wx:if="{{!isPatient}}" mode="selector" range="{{departments}}" value="{{deptIndex}}" bindchange="onDeptChange">
       <view class="form-row">
         <text class="form-label">科室</text>
         <text class="form-value">{{departments[deptIndex]}} ▾</text>
@@ -24,7 +24,7 @@
       <input class="form-input" placeholder="如：求值 8/28 夜班" value="{{title}}" bindinput="onTitleInput" maxlength="30" />
     </view>
 
-    <view class="time-block">
+    <view class="time-block" wx:if="{{!isPatient}}">
       <view class="time-row">
         <text class="form-label">开始</text>
         <picker mode="date" value="{{startDate}}" bindchange="onStartDateChange">

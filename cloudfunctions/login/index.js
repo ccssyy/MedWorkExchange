@@ -57,6 +57,63 @@ exports.main = async (event) => {
     return { ok: true }
   }
 
+  // ── 患者端：手机号绑定（phoneCode 换手机号）──
+  if (action === 'bindPatientPhone') {
+    const found = await users.where({ openid: OPENID }).get()
+    let user = found.data[0]
+    if (!user) {
+      // 首次进入：建档（未激活）
+      await users.add({
+        data: {
+          openid: OPENID, nickname: '', avatar: '', phone: '', role: 'student',
+          hospital_id: null, hospitalName: '', province: '', city: '', department: '',
+          verify_status: 'none', verify_material: null, credit_score: 100,
+          stats: { published: 0, accepted: 0, completed: 0 },
+          created_at: new Date(), updated_at: new Date()
+        }
+      })
+      const again = await users.where({ openid: OPENID }).get()
+      user = again.data[0]
+    }
+    try {
+      const phoneRes = await cloud.openapi.phonenumber.getPhoneNumber({ code: event.phoneCode })
+      const phone = phoneRes.phoneInfo && phoneRes.phoneInfo.purePhoneNumber
+      if (!phone) return { ok: false, message: '手机号获取失败' }
+      await users.doc(user._id).update({
+        data: { phone, updated_at: new Date() }
+      })
+      const masked = phone.slice(0, 3) + '****' + phone.slice(-4)
+      return { ok: true, phoneMasked: masked }
+    } catch (e) {
+      console.error('getPhoneNumber error', e)
+      return { ok: false, message: '手机号解密失败，请重试' }
+    }
+  }
+
+  // ── 患者端：实名激活（role → patient）──
+  if (action === 'activatePatient') {
+    const found = await users.where({ openid: OPENID }).get()
+    const user = found.data[0]
+    if (!user) return { ok: false, message: '请先完成手机号验证' }
+    if (user.role === 'patient') return { ok: true, user: maskUser(user) }
+    const realName = String(event.realName || '').trim()
+    const idLast4 = String(event.idLast4 || '').trim()
+    if (!realName || !/^\d{4}$/.test(idLast4)) {
+      return { ok: false, message: '实名信息不完整' }
+    }
+    await users.doc(user._id).update({
+      data: {
+        role: 'patient',
+        real_name: realName.slice(0, 20),       // 追责留档，前端不下发
+        id_last4: idLast4,
+        nickname: user.nickname || realName.slice(0, 4),
+        updated_at: new Date()
+      }
+    })
+    const again = await users.where({ openid: OPENID }).get()
+    return { ok: true, user: maskUser(again.data[0]) }
+  }
+
   return { ok: false, message: '未知 action' }
 }
 
@@ -72,6 +129,8 @@ function maskUser(u) {
     city: u.city || '',
     department: u.department || '',
     verifyStatus: u.verify_status || 'none',
+    phoneMasked: u.phone ? u.phone.slice(0, 3) + '****' + u.phone.slice(-4) : '',
+    isPatient: u.role === 'patient',
     creditScore: u.credit_score == null ? 100 : u.credit_score,
     stats: u.stats || { published: 0, accepted: 0, completed: 0 }
   }

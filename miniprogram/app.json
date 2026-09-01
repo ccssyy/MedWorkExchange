@@ -9,7 +9,8 @@
     "pages/my-list/my-list",
     "pages/post-publish/post-publish",
     "pages/post-detail/post-detail",
-    "pages/chat/chat"
+    "pages/chat/chat",
+    "pages/patient-activate/patient-activate"
   ],
   "window": {
     "navigationBarBackgroundColor": "#0F6E56",
