@@ -10,7 +10,9 @@
     "pages/post-publish/post-publish",
     "pages/post-detail/post-detail",
     "pages/chat/chat",
-    "pages/patient-activate/patient-activate"
+    "pages/patient-activate/patient-activate",
+    "pages/verify-submit/verify-submit",
+    "pages/admin-verify/admin-verify"
   ],
   "window": {
     "navigationBarBackgroundColor": "#0F6E56",

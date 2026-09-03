@@ -30,27 +30,21 @@ Page({
 
   goVerify() {
     const user = this.data.user
-    // 医务工作者走医院认证；患者/家属走患者身份激活
+    // 患者走患者激活；管理员可见审核入口；其余进医务认证提交页
     if (user && user.isPatient) {
       return wx.navigateTo({ url: '/pages/patient-activate/patient-activate' })
     }
-    wx.showModal({
-      title: '身份选择',
-      content: '您是医务工作者（医院认证）还是患者/家属（陪诊需求）？',
-      confirmText: '医务认证',
-      cancelText: '患者/家属',
-      success: (r) => {
-        if (r.confirm) {
-          wx.showModal({
-            title: '医院认证',
-            content: '认证功能即将开放：选择省-市-医院并提交学生证/工牌照片，人工审核通过后即可发布与接单',
-            showCancel: false
-          })
-        } else {
-          wx.navigateTo({ url: '/pages/patient-activate/patient-activate' })
+    if (user && user.isAdmin) {
+      wx.showActionSheet({
+        itemList: ['提交/查看我的认证', '认证审核（管理）'],
+        success: ({ tapIndex }) => {
+          if (tapIndex === 0) wx.navigateTo({ url: '/pages/verify-submit/verify-submit' })
+          else wx.navigateTo({ url: '/pages/admin-verify/admin-verify' })
         }
-      }
-    })
+      })
+      return
+    }
+    wx.navigateTo({ url: '/pages/verify-submit/verify-submit' })
   },
 
   goMyDealings() {

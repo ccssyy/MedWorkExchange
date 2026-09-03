@@ -1,0 +1,58 @@
+<view class="container">
+  <!-- 已认证状态卡 -->
+  <view class="card status-card" wx:if="{{myStatus === 'verified'}}">
+    <view class="status-icon">✓</view>
+    <view class="status-text">已完成医务认证</view>
+    <view class="text-hint">可发布、接单与发帖</view>
+  </view>
+
+  <view class="card status-card" wx:elif="{{myStatus === 'pending'}}">
+    <view class="status-icon pending">…</view>
+    <view class="status-text">审核中</view>
+    <view class="text-hint">预计 1 个工作日内完成，结果将在此页更新</view>
+  </view>
+
+  <view class="card status-card rejected" wx:elif="{{myStatus === 'rejected'}}">
+    <view class="status-icon rejected">✗</view>
+    <view class="status-text">认证被驳回</view>
+    <view class="text-hint">理由：{{rejectReason || '材料不符合要求'}}</view>
+    <view class="text-hint">请修改后重新提交</view>
+  </view>
+
+  <!-- 表单（rejected/none 可填） -->
+  <block wx:if="{{myStatus !== 'verified' && myStatus !== 'pending'}}">
+    <view class="card form-card">
+      <view class="form-title">申请身份</view>
+      <picker mode="selector" range="{{roleOptions}}" value="{{roleIndex}}" bindchange="onRoleChange">
+        <view class="picker-value {{roleIndex < 0 ? 'placeholder' : ''}}">
+          {{roleIndex < 0 ? '请选择身份' : roleOptions[roleIndex]}}
+        </view>
+      </picker>
+      <view class="text-hint role-hint" wx:if="{{roleIndex >= 0}}">{{roleHints[roleIndex]}}</view>
+
+      <view class="form-title">所在医院</view>
+      <picker mode="selector" range="{{hospitalNames}}" value="{{hospitalIndex}}" bindchange="onHospitalChange">
+        <view class="picker-value {{hospitalIndex < 0 ? 'placeholder' : ''}}">
+          {{hospitalIndex < 0 ? '请选择医院' : hospitalNames[hospitalIndex]}}
+        </view>
+      </picker>
+
+      <view class="form-title">认证材料（最多 3 张）</view>
+      <view class="img-row">
+        <view class="img-item" wx:for="{{files}}" wx:key="fileID">
+          <image src="{{item.fileID}}" mode="aspectFill" class="img-thumb" data-index="{{index}}" bindtap="onPreview" />
+          <view class="img-del" data-index="{{index}}" catchtap="onRemoveImage">×</view>
+        </view>
+        <view class="img-add" wx:if="{{files.length < maxFiles}}" bindtap="onAddImage">＋</view>
+      </view>
+      <view class="text-hint">材料仅用于身份核验，认证通过后平台将按隐私政策最小化保存</view>
+
+      <view class="form-title">学信网验证码（选填）</view>
+      <input class="chsi-input" placeholder="《学籍在线验证报告》上的验证码，可加快审核" value="{{chsiCode}}" bindinput="onChsiInput" maxlength="20" />
+
+      <button class="btn-primary submit-btn" disabled="{{submitting || uploading}}" bindtap="onSubmit">
+        {{submitting ? '提交中…' : uploading ? '图片上传中…' : '提交认证'}}
+      </button>
+    </view>
+  </block>
+</view>

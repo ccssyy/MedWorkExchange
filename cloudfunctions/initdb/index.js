@@ -34,12 +34,15 @@ exports.main = async (event = {}) => {
     return { ok: false, code: 'FORBIDDEN', message: 'test actions require testKey' }
   }
 
-  // ── 测试辅助：设置/更新当前用户的测试字段（is_admin / credit_score 等）──
+  // ── 测试辅助：设置/更新当前用户的测试字段（is_admin / credit_score / verify_status）──
   if (event.action === 'setTestUser') {
     const { OPENID } = cloud.getWXContext()
     const patch = {}
     if (typeof event.isAdmin === 'boolean') patch.is_admin = event.isAdmin
     if (event.creditScore != null) patch.credit_score = Number(event.creditScore)
+    if (event.verifyStatus != null && ['none', 'pending', 'verified', 'rejected'].includes(event.verifyStatus)) {
+      patch.verify_status = event.verifyStatus
+    }
     if (!Object.keys(patch).length) return { ok: false, message: 'no patch fields' }
     const r = await db.collection('users').where({ openid: OPENID })
       .update({ data: { ...patch, updated_at: new Date() } })

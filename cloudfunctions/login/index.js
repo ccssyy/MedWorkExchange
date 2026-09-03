@@ -131,6 +131,7 @@ function maskUser(u) {
     verifyStatus: u.verify_status || 'none',
     phoneMasked: u.phone ? u.phone.slice(0, 3) + '****' + u.phone.slice(-4) : '',
     isPatient: u.role === 'patient',
+    isAdmin: !!u.is_admin,
     creditScore: u.credit_score == null ? 100 : u.credit_score,
     stats: u.stats || { published: 0, accepted: 0, completed: 0 }
   }

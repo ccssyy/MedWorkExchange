@@ -1,0 +1,10 @@
+{
+  "name": "verify",
+  "version": "1.0.0",
+  "description": "医务认证：OCR 自动预审 + is_admin 人工审核；学信网验证码接口预留",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^4.0.2",
+    "tencentcloud-sdk-nodejs-ocr": "^4.0.1000"
+  }
+}
