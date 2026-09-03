@@ -20,6 +20,7 @@ Page({
     maxFiles: 3,
     chsiCode: '',        // 学信网验证码（接口预留，选填）
     myStatus: null,      // none/pending/verified/rejected
+    statusLoading: true, // 认证状态查询中（防止表单闪现）
     rejectReason: '',
     submitting: false,
     uploading: false
@@ -39,11 +40,14 @@ Page({
       if (r.ok) {
         this.setData({
           myStatus: r.status,
+          statusLoading: false,
           rejectReason: r.rejectReason || '',
           roleIndex: r.roleType ? ROLE_OPTIONS.findIndex(x => x.key === r.roleType) : -1
         })
+      } else {
+        this.setData({ statusLoading: false })
       }
-    }).catch(() => {})
+    }).catch(() => this.setData({ statusLoading: false }))
   },
 
   loadHospitals() {

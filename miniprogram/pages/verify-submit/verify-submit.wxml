@@ -1,4 +1,8 @@
 <view class="container">
+  <!-- 状态查询中（防表单闪现） -->
+  <view wx:if="{{statusLoading}}" class="empty text-hint">加载中…</view>
+
+  <block wx:else>
   <!-- 已认证状态卡 -->
   <view class="card status-card" wx:if="{{myStatus === 'verified'}}">
     <view class="status-icon">✓</view>
@@ -54,5 +58,6 @@
         {{submitting ? '提交中…' : uploading ? '图片上传中…' : '提交认证'}}
       </button>
     </view>
+  </block>
   </block>
 </view>
