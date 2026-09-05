@@ -40,6 +40,8 @@ NODE_PATH=$PWD/node_modules node /Users/samchen/Work/git/MedWorkExchange/test/au
 | verify_escort_gate.js | 陪诊类目 + 病例讨论分级可见性 gate |
 | verify_patient.js | 患者端：患者角色发布 escort 单/禁止接单/激活页渲染 |
 | verify_m4_report.js | M4 举报仲裁：seed B 接单→举报→防重/self 拦截→is_admin 仲裁成立→下架+落库→已办结再仲裁被拒（驳回/真机对端挪双账号补测） |
+| verify_m5_verify.js | M5 医务认证：提交(OCR降级→pending)→防重→admin 列表→驳回→重交→approve→revoke 保护，结束恢复 verified |
+| reset_user_a.js | 复位测试A：清 verify_status/verify_material/hospital_id/hospitalName（保留 is_admin），用于重走真实认证流 |
 
 ## 关键经验（踩坑记录）
 

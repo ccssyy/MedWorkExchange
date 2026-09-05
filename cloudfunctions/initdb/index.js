@@ -1,6 +1,7 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const _ = db.command
 
 const collections = [
   'users', 'hospitals', 'dealings', 'applications',
@@ -42,6 +43,12 @@ exports.main = async (event = {}) => {
     if (event.creditScore != null) patch.credit_score = Number(event.creditScore)
     if (event.verifyStatus != null && ['none', 'pending', 'verified', 'rejected'].includes(event.verifyStatus)) {
       patch.verify_status = event.verifyStatus
+    }
+    // clearVerifyMaterial: 连材料、医院绑定一并清空（真正的"复位重走认证流"，而不只是改状态位）
+    if (event.clearVerifyMaterial === true) {
+      patch.verify_material = _.remove()
+      patch.hospital_id = _.remove()
+      patch.hospitalName = _.remove()
     }
     if (!Object.keys(patch).length) return { ok: false, message: 'no patch fields' }
     const r = await db.collection('users').where({ openid: OPENID })
