@@ -41,7 +41,8 @@ NODE_PATH=$PWD/node_modules node /Users/samchen/Work/git/MedWorkExchange/test/au
 | verify_patient.js | 患者端：患者角色发布 escort 单/禁止接单/激活页渲染 |
 | verify_m4_report.js | M4 举报仲裁：seed B 接单→举报→防重/self 拦截→is_admin 仲裁成立→下架+落库→已办结再仲裁被拒（驳回/真机对端挪双账号补测） |
 | verify_m5_verify.js | M5 医务认证：提交(OCR降级→pending)→防重→admin 列表→驳回→重交→approve→revoke 保护，结束恢复 verified |
-| reset_user_a.js | 复位测试A：清 verify_status/verify_material/hospital_id/hospitalName（保留 is_admin），用于重走真实认证流 |
+| reset_user_a.js | 复位测试A：清 verify_status/verify_material/hospital_id/hospitalName（保留 is_admin），末尾回读提交页确认渲染为未认证表单 |
+| verify_m5_ui_flow.js | M5 **小程序端 UI 全链路**：提交页选身份/医院/学信码 →「＋」选图（mock）→ 真实上云 → 提交→pending → 审核端点通过 → verified → 落库留痕核查；每步截图到 `screenshots/` |
 
 ## 关键经验（踩坑记录）
 
@@ -58,6 +59,10 @@ NODE_PATH=$PWD/node_modules node /Users/samchen/Work/git/MedWorkExchange/test/au
 - **mock showModal 必须在连接后立刻设置**——onAccept 等处理器里 await showModal，漏 mock 会永久挂起（M3 chat 首跑教训）。
 - 全局配置改动（app.json 注册新页面/tabBar）热重载不可靠，需 `cli close` + `/v2/auto` 重开触发全量编译（tabBar 显示 M1 旧配置即此因）。
 - `cli cloud functions deploy --names` 逗号分隔多函数在该 IDE 版本不生效，逐个部署。
+- **图片上传类用例的 UI 驱动法**（M5 UI 全链路验证得出）：相册选择是唯一无法模拟的环节，用 `mp.mockWxMethod('chooseMedia', { tempFiles: [{ tempFilePath: <沙箱路径> }] })` 替换；**路径必须是模拟器沙箱内的文件**——先 `wx.getFileSystemManager().writeFile({ filePath: \`${wx.env.USER_DATA_PATH}/x.jpg\`, data: base64, encoding: 'base64' })` 落地文件（`wx.env.USER_DATA_PATH` 在模拟器里是 `http://usr`），再把该路径喂给 mock。传宿主绝对路径会 `file not found`（uploadFile 只能读沙箱内文件）。之后 `wx.cloud.uploadFile`、imgSecCheck、云函数提交全为真实链路。
+- 截图用 `mp.screenshot({ path })`（MiniProgram 上的方法，**Page 上没有 screenshot**）；截 cloud:// 缩略图前留 1s 左右等图片渲染，否则截到空白占位。
+- 认证类 UI 用例前置：账号须为 `verify_status=none`，否则表单区不渲染。先跑 `reset_user_a.js` 复位（保留 is_admin）。
+- 生成测试材料图：`test/fixtures/verify_material_sample.jpg`（Pillow 画的中文胸牌，31KB，供上传类用例复用）。
 
 ## 环境常量
 

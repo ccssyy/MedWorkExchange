@@ -44,14 +44,21 @@ async function main() {
   const my = await callFn(mp, 'verify', { action: 'myVerify' })
   record('myVerify → none', !!(my && my.ok && my.status === 'none'), my ? JSON.stringify(my).slice(0, 80) : '')
 
-  // ===== 4. 页面渲染门闩：无闪现回归 =====
-  const page = await mp.currentPage().catch(() => null)
-  if (page && page.path && page.path.indexOf('verify-submit') >= 0) {
-    const d = await page.data()
-    record('verify-submit statusLoading 门闩正常', typeof d.statusLoading === 'boolean', `statusLoading=${d.statusLoading}, myStatus=${d.myStatus}`)
-  } else {
-    record('verify-submit 页未打开（跳过页面断言，属正常）', true, page ? page.path : 'no page')
+  // ===== 4. 页面渲染门闩：重开提交页确认渲染为「未认证表单」且无闪现回归 =====
+  await mp.reLaunch('/pages/verify-submit/verify-submit')
+  let page = null
+  for (let i = 0; i < 20; i++) {
+    await new Promise(r => setTimeout(r, 500))
+    const p = await mp.currentPage()
+    if (p && p.path.indexOf('verify-submit') >= 0) {
+      const d = await p.data()
+      if (d.statusLoading === false) { page = p; break }
+    }
   }
+  const pd = page ? await page.data() : null
+  record('提交页回读 → 未认证表单', !!(pd && pd.myStatus === 'none'), pd ? `myStatus=${pd.myStatus}, statusLoading=${pd.statusLoading}` : 'timeout')
+  record('表单可用（提交按钮在）', !!(page && await page.$('.submit-btn')), '')
+  record('未渲染状态卡（pending/verified 卡不出现）', !!(page && !(await page.$('.status-icon'))), '')
 
   console.log('\n=== 汇总 ===')
   let fail = 0
