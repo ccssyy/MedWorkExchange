@@ -58,7 +58,7 @@
 | # | 资产 | 位置 | 状态 | 接收动作 |
 |---|---|---|---|---|
 | 1 | 源码仓库（含全部分支） | `ssh://git@ssh.github.com:443/ccssyy/MedWorkExchange.git` | 已具备 | 接手人 Clone 并确认 7 个分支可见 |
-| 2 | 分支：`main` / `develop` / `feature/m2-matching-flow` / `feature/m3-messaging` / `feature/m4-report` / `feature/patient-escort` / `feature/v1.1-requirement-changes` | 同上 | 已具备 | 确认哪些分支已死、哪些待清理 |
+| 2 | 分支：`main` / `develop` / `feature/m2-matching-flow` / `feature/m3-messaging` / `feature/m4-report` / `feature/patient-escort` / `feature/v1.1-requirement-changes` | 同上 | ✅ 已确认（2026-11-11） | 5 个 feature 分支已全部合入 develop 并删除（本地+远端）；另发现前任 worktree 内有未入库 S4 半成品（notify/timer，24 文件 2156 行），已保全至 `wip/s4-notify-timer`（fcb6ff1）后移除 worktree |
 | 3 | 发布标签 | `v0.1.0`、`v0.2.0` | 已具备 | 确认 tag 与线上版本对应关系 |
 | 4 | 云函数依赖锁 | `cloudfunctions/*/package-lock.json`（10 份，内容高度重复） | 已具备 | 确认云端运行时 Node 版本 |
 | 5 | 数据库初始化脚本 | `scripts/init-db.js` + `cloudfunctions/initdb/index.js` | 已具备 | 核验可幂等重跑 |
@@ -278,6 +278,7 @@ KT 会议    01/02  03/04/05  06
   - 阻塞中：~~`TEST_KEY=mwe-test-only` 控制台环境变量配置~~ → **当日已配置，目标回归全部通过**：`verify_m3_chat` 6/6、`verify_m3_flow` 7/7、`verify_m3_review` 8/8、`verify_m5_verify` 13/13、`verify_m4_report` 16/16——本次改动的 4 个函数（message/dealing·application 链/review/verify/report）回归全绿。仍待：管理员双人化（P9，用户操作）；OCR 密钥轮换（P7——当前 OCR 未开通、无密钥可轮换，开通时按 admin-operations-guide 配置即视同完成）。
   - 决策记录：**内容安全公共模块抽取推至 S3**——云函数无共享层机制，抽公共模块需引入"部署前同步"步骤；当前 6 处中 5 处逐字一致、message 为有意变体（导流拦截），P0 已清零，收益/成本比不支持本轮做。
   - 新发现（代码通读）：Q8 升级为 P1（D8 跨院申请 UI 遗漏）；另发现 `verify/index.js:121` OCR 预审顺序依赖缺陷（某材料 OCR 不可用会把已判 verified 重置回 pending）、`detail.js:68`/`publish.js:111` 的 fee=0 显示与入库缺陷、index 首屏双重请求、页面标题"医班互换/医班互助"漂移——均列入 S3 修复范围。
+  - **分支整理（同日）**：5 个已合并 feature 分支删除（本地+远端）；发现前任 worktree（`workbuddy/develop-8d62b487`）内有未提交的 S4 半成品——`notify`（订阅消息）+ `timer`（72h/96h 超时兜底）两个云函数、配套设计文档 2 份、`utils/subscribe.js` 授权征集封装、`wx-server-sdk` stub 单测基建，共 24 文件 2156 行（9-11 遗留，未完成未验证）→ 已提交保全至 `wip/s4-notify-timer`（fcb6ff1）并推送远端，worktree 移除。隐性知识 §2.4-6「未入库的手工修正」部分达成答案：**存在**，且已入库保全。仓库现为 `main` / `develop` / `wip/s4-notify-timer` 三分支。
 
 ---
 
