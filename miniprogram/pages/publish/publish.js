@@ -1,4 +1,5 @@
 const app = getApp()
+const subscribe = require('../../utils/subscribe')
 
 Page({
   data: {
@@ -96,6 +97,10 @@ Page({
     if (endT <= startT) {
       return wx.showToast({ title: '结束时间需晚于开始时间', icon: 'none' })
     }
+
+    // 订阅消息授权：必须在 await 之前同步发起（此时仍在用户点击的调用栈中）。
+    // 为自己授权「收到新申请」，服务端之后才能把申请通知推到本用户。
+    subscribe.request([subscribe.KEYS.NEW_APPLICATION])
 
     this.setData({ submitting: true })
     try {

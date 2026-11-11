@@ -1,5 +1,6 @@
 const app = getApp()
 const { reportFlow } = require('../../utils/report')
+const subscribe = require('../../utils/subscribe')
 
 Page({
   data: {
@@ -100,6 +101,8 @@ Page({
 
   async onApply() {
     if (this.data.applying) return
+    // 订阅消息授权：需在 await 之前同步发起（仍在用户点击的调用栈中）
+    subscribe.request([subscribe.KEYS.APPLICATION_RESULT])
     this.setData({ applying: true })
     try {
       const res = await wx.cloud.callFunction({

@@ -1,3 +1,5 @@
+const subscribe = require('./utils/subscribe')
+
 App({
   onLaunch() {
     if (!wx.cloud) {
@@ -9,6 +11,9 @@ App({
         traceUser: true
       })
       this.ensureUser()
+      // 预取订阅消息模板 ID：必须在启动时拿到并缓存，
+      // 因为 requestSubscribeMessage 只能在用户手势的同步栈中发起，来不及等网络
+      subscribe.prefetch()
     }
   },
 

@@ -1,6 +1,7 @@
 const app = getApp()
 const db = wx.cloud.database()
 const { reportFlow } = require('../../utils/report')
+const subscribe = require('../../utils/subscribe')
 
 Page({
   data: {
@@ -217,6 +218,9 @@ Page({
   onSend() {
     const text = this.data.inputText.trim()
     if (!text || this.data.sending) return
+    // 订阅消息授权：为自己授权「新私信」，这样对方回复时本用户才能收到推送。
+    // 必须同步发起（此时仍在点击/发送的调用栈中），故放在 setData 之前。
+    subscribe.request([subscribe.KEYS.NEW_MESSAGE])
     this.setData({ sending: true })
     wx.cloud.callFunction({
       name: 'message',

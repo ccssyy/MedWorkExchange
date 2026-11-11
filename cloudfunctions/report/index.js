@@ -5,6 +5,19 @@ const _ = db.command
 
 const CREDIT_REPORT_PENALTY = 20   // 举报成立：被举报人 -20（设计文档信用分规则）
 
+// ── 通知入队（outbox 模式）：只写队列，由 notify 云函数统一出站 ──
+async function enqueueNotify(fields) {
+  if (!fields || !fields.to_uid) return
+  try {
+    const now = new Date()
+    await db.collection('notifications').add({
+      data: { ...fields, status: 'pending', attempts: 0, created_at: now, updated_at: now }
+    })
+  } catch (e) {
+    console.error('[enqueueNotify] failed', e)
+  }
+}
+
 // ── 举报原因枚举 ──
 const REASONS = ['fake', 'illegal', 'harass', 'fraud', 'medical_violation', 'other']
 const REASON_LABELS = {
@@ -269,11 +282,31 @@ exports.main = async (event) => {
       await db.collection('reports').doc(reportId).update({
         data: { status: 'resolved', result: 'upheld', resolve_note: String(note || '').slice(0, 100), resolved_at: now, resolved_by: user._id }
       })
+      // 订阅消息：告知举报人处理结果
+      await enqueueNotify({
+        to_uid: report.reporter_uid,
+        template_key: 'reportResult',
+        page: 'pages/profile/profile',
+        payload: { resultText: '=已处理', resolveTime: now, note: String(note || '').slice(0, 20) || '举报成立' },
+        biz_type: 'report',
+        biz_id: reportId,
+        dedup_key: `reportResult:${reportId}:upheld`
+      })
       return { ok: true, result: 'upheld', message: `已下架并扣除被举报人 ${CREDIT_REPORT_PENALTY} 信用分` }
     }
     // 不成立：驳回
     await db.collection('reports').doc(reportId).update({
       data: { status: 'resolved', result: 'rejected', resolve_note: String(note || '').slice(0, 100), resolved_at: now, resolved_by: user._id }
+    })
+    // 订阅消息：告知举报人处理结果
+    await enqueueNotify({
+      to_uid: report.reporter_uid,
+      template_key: 'reportResult',
+      page: 'pages/profile/profile',
+      payload: { resultText: '=已驳回', resolveTime: now, note: String(note || '').slice(0, 20) || '举报未成立' },
+      biz_type: 'report',
+      biz_id: reportId,
+      dedup_key: `reportResult:${reportId}:rejected`
     })
     return { ok: true, result: 'rejected', message: '已驳回该举报' }
   }

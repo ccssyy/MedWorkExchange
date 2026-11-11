@@ -38,6 +38,20 @@ async function getUser() {
 
 let OPENID_OF = null
 
+// ── 通知入队（outbox 模式）──
+// 只写队列，由 notify 云函数统一出站；失败静默，不影响发信主流程。
+async function enqueueNotify(fields) {
+  if (!fields || !fields.to_uid) return
+  try {
+    const now = new Date()
+    await db.collection('notifications').add({
+      data: { ...fields, status: 'pending', attempts: 0, created_at: now, updated_at: now }
+    })
+  } catch (e) {
+    console.error('[enqueueNotify] failed', e)
+  }
+}
+
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
   OPENID_OF = OPENID
@@ -145,7 +159,20 @@ exports.main = async (event) => {
     await db.collection('conversations').doc(conversationId).update({
       data: { last_message: text.slice(0, 50), last_time: now, updated_at: now }
     })
-    // TODO(M3): 订阅消息通知收信方（授权征集在 M4 一起）
+    // 订阅消息：通知收信方「新私信」（授权额度由收信方在自己发消息时征集）
+    await enqueueNotify({
+      to_uid: toUid,
+      template_key: 'newMessage',
+      page: 'pages/chat/chat?conversationId=' + conversationId,
+      payload: {
+        senderName: user.nickname || '医同学',
+        summary: text.slice(0, 20),
+        sendTime: now
+      },
+      biz_type: 'conversation',
+      biz_id: conversationId,
+      dedup_key: `newMessage:${added._id}`
+    })
     return { ok: true, messageId: added._id }
   }
 

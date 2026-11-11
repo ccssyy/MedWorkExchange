@@ -3,6 +3,21 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
+// ── 通知入队（outbox 模式）──
+// 业务函数只写入队、不直接调用微信接口：发送失败不会阻塞业务，且只有 notify 云函数需要
+// 声明 subscribeMessage.send 云调用权限。队列由 notify 定时出站。失败静默，不影响主流程。
+async function enqueueNotify(fields) {
+  if (!fields || !fields.to_uid) return
+  try {
+    const now = new Date()
+    await db.collection('notifications').add({
+      data: { ...fields, status: 'pending', attempts: 0, created_at: now, updated_at: now }
+    })
+  } catch (e) {
+    console.error('[enqueueNotify] failed', e)
+  }
+}
+
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
   const action = event.action
@@ -99,7 +114,20 @@ exports.main = async (event) => {
     await db.collection('dealings').doc(dealingId).update({
       data: { status: 'applied', updated_at: now }
     })
-    // TODO(M3): 订阅消息通知发布方"收到新申请"
+    // 订阅消息：通知发布方「收到新申请」
+    await enqueueNotify({
+      to_uid: dealing.owner_uid,
+      template_key: 'newApplication',
+      page: 'pages/my-list/my-list',
+      payload: {
+        dealingTitle: dealing.title || '',
+        applicantName: user.nickname || '医同学',
+        applyTime: now
+      },
+      biz_type: 'dealing',
+      biz_id: dealingId,
+      dedup_key: `newApplication:${dealingId}:${user._id}`
+    })
     return { ok: true }
   }
 
@@ -131,7 +159,10 @@ exports.main = async (event) => {
     await db.collection('applications').doc(applicationId).update({
       data: { status: 'accepted', updated_at: now }
     })
-    // 其余 pending 申请 → rejected
+    // 其余 pending 申请 → rejected（先取名单，供后续通知「未通过」）
+    const others = await db.collection('applications').where({
+      dealing_id: app.dealing_id, status: 'pending'
+    }).get()
     await db.collection('applications').where({
       dealing_id: app.dealing_id, status: 'pending'
     }).update({
@@ -148,7 +179,37 @@ exports.main = async (event) => {
     })
     // 自动创建会话（私信前置条件）
     await ensureConversation(dealing, app, now)
-    // TODO(M3): 订阅消息通知接单方"申请已通过"
+
+    // 订阅消息：通知申请方「已通过」
+    await enqueueNotify({
+      to_uid: app.applicant_uid,
+      template_key: 'applicationResult',
+      page: 'pages/detail/detail?id=' + app.dealing_id,
+      payload: {
+        dealingTitle: dealing.title || '',
+        resultText: '=已通过',
+        resultTime: now
+      },
+      biz_type: 'dealing',
+      biz_id: app.dealing_id,
+      dedup_key: `applicationResult:${applicationId}:accepted`
+    })
+    // 订阅消息：通知其余候选「未通过」
+    for (const o of others.data || []) {
+      await enqueueNotify({
+        to_uid: o.applicant_uid,
+        template_key: 'applicationResult',
+        page: 'pages/my-list/my-list',
+        payload: {
+          dealingTitle: dealing.title || '',
+          resultText: '=未通过',
+          resultTime: now
+        },
+        biz_type: 'dealing',
+        biz_id: app.dealing_id,
+        dedup_key: `applicationResult:${o._id}:rejected`
+      })
+    }
     return { ok: true }
   }
 

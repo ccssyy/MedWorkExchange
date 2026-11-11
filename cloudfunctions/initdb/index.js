@@ -6,7 +6,8 @@ const _ = db.command
 const collections = [
   'users', 'hospitals', 'dealings', 'applications',
   'conversations', 'messages', 'reviews', 'reports',
-  'posts', 'comments', 'post_likes', 'ads', 'configs', 'audit_logs'
+  'posts', 'comments', 'post_likes', 'ads', 'configs', 'audit_logs',
+  'notifications'
 ]
 
 const pilotHospitals = [

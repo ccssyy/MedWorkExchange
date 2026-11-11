@@ -1,0 +1,9 @@
+{
+  "name": "notify",
+  "version": "1.0.0",
+  "description": "订阅消息统一出站（outbox 消费）：模板清洗 / 重试 / 错误码回写",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^4.0.2"
+  }
+}

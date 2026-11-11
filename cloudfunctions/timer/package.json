@@ -1,0 +1,9 @@
+{
+  "name": "timer",
+  "version": "1.0.0",
+  "description": "超时兜底定时任务：到期关闭 + 履约超时提醒/自动确认",
+  "main": "index.js",
+  "dependencies": {
+    "wx-server-sdk": "^4.0.2"
+  }
+}
