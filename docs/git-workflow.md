@@ -36,7 +36,8 @@ feature/* 里程碑/功能开发分支：从 develop 切出，完成后合回 de
 ## 当前状态
 
 - main @ 261f5da（tag v0.2.0 = M2 + v1.1 验收通过，2026-08-27）
-- develop @ d9f9cf4（与 main 同内容，验收体系已入库）
-- 已合并分支：feature/m2-matching-flow、feature/v1.1-requirement-changes
-- 下一步：M3（私信收发 + 订阅消息 + 履约确认 + 互评信用分），从 develop 切 `feature/m3-*`
-- 注意：cloudfunctions/initdb 含测试辅助 action（seedApplication/cleanTestApplication/peek），M3 开工前移除或加环境开关
+- develop 为集成主线：已合入 M3 联络闭环（f2498ae…3d4c9e0）、患者陪诊端（26ed56c）、M4 举报仲裁（6783262）、M5 医务认证（97b95c8）
+- 已合并分支：feature/m2-matching-flow、feature/v1.1-requirement-changes、feature/m3-messaging、feature/m4-report、feature/patient-escort
+- 2026-11-11 S2 安全止血：initdb 测试后门收口（TEST_KEY 只从环境变量读取）、4 函数 OPENID_OF 全局清除、markRead 成员校验（ee33af5）
+- 下一步：S3 缺陷修复与 v0.3.0 发布，排期见 `docs/handover-plan.md` §8
+- 注意：initdb 全部 action 需 `TEST_KEY` 环境变量匹配调用方 `testKey`，未配置的环境一律 FORBIDDEN（生产环境无需配置即关闭）
