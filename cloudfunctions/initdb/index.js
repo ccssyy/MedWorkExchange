@@ -23,16 +23,16 @@ const departments = [
   '肿瘤科', '康复科', '全科', '其他'
 ]
 
-// 测试辅助 action 口令（防误触发；云函数环境变量可覆盖，非安全边界）
-const TEST_KEY = process.env.TEST_KEY || 'mwe-test-only'
+// 运维/测试口令：只从云函数环境变量读取，仓库不落默认值。
+// 未配置 TEST_KEY 的环境（生产）本函数所有调用一律拒绝，防测试后门被利用（交接计划 R1/T1）
+const TEST_KEY = process.env.TEST_KEY || ''
 
 exports.main = async (event = {}) => {
   const logs = []
 
-  // ── 测试辅助 action 统一入口校验 ──
-  const TEST_ACTIONS = ['seedApplication', 'cleanTestApplication', 'peek', 'setTestUser']
-  if (TEST_ACTIONS.includes(event.action) && event.testKey !== TEST_KEY) {
-    return { ok: false, code: 'FORBIDDEN', message: 'test actions require testKey' }
+  // ── 全函数口令校验：建库/seed/测试辅助都是运维动作，不对普通用户开放 ──
+  if (!TEST_KEY || event.testKey !== TEST_KEY) {
+    return { ok: false, code: 'FORBIDDEN', message: 'initdb requires TEST_KEY env var and matching testKey' }
   }
 
   // ── 测试辅助：设置/更新当前用户的测试字段（is_admin / credit_score / verify_status）──
@@ -99,7 +99,11 @@ exports.main = async (event = {}) => {
     if (where) q = q.where(where)
     if (orderField) q = q.orderBy(orderField, orderDir === 'asc' ? 'asc' : 'desc')
     const res = await q.limit(Math.min(limit || 10, 50)).get()
-    return { ok: true, data: res.data }
+    // users 只做敏感字段裁剪（openid/手机号/实名不出测试后门），其余字段留给脚本断言
+    const data = collection === 'users'
+      ? res.data.map(({ openid, phone, real_name, id_last4, ...safe }) => safe)
+      : res.data
+    return { ok: true, data }
   }
 
   for (const name of collections) {
