@@ -204,7 +204,7 @@
 | Q5 | 认证审核无 SLA、无抽检比例落地 | `verify/index.js:175-255` | 用户体验与合规风险 | P1 |
 | Q6 | 无分页（`limit(50)` 硬编码）、会话列表 N+1、`db.RegExp` 四字段 OR | `dealing/index.js:110` 等 | 数据量上升后超时 | P2 |
 | Q7 | 集合 `ads`/`configs` 声明未使用；科室字典前端硬编码双份 | `pages/index/index.js:75-79` vs `scripts/init-db.js:26-32` | 维护分叉 | P3 |
-| Q8 | `detail.js` 的 `CROSS_HOSPITAL` 分支服务端永不返回（D8 后失效） | `miniprogram/pages/detail/detail.js:124` | 死分支，误导后续开发 | P3 |
+| Q8 | **D8 跨院申请放开只落了后端，详情页 UI 仍整体禁用**：`detail.wxml:92-94` 对跨院单显示"仅可浏览，不能申请"横幅、`:128` 申请卡带 `!crossHospital` 条件（M2 时代产物，D8 改造遗漏）；`detail.js:124` 的 `CROSS_HOSPITAL` 分支因此成死代码。需产品确认后修 UI（与 H3"首页默认展示范围结论"一并处理） | `miniprogram/pages/detail/detail.wxml:92-94,128`、`detail.js:124` vs `application/index.js:36-38` | 核心场景（规培生跨院帮忙，D7）在小程序端不可用 | **P1** |
 
 ### 6.4 关键技术债（按可验证的事实列出）
 
@@ -269,6 +269,15 @@ S4 功能                             ████████
 S5 收尾                                     ████
 KT 会议    01/02  03/04/05  06
 ```
+
+### 执行进度日志（随交接执行追加，最新在上）
+
+- **2026-11-11（S2 阶段，develop @ a7b3812）**
+  - 已完成：initdb 后门收口——`TEST_KEY` 只从云函数环境变量读取、仓库不再含默认口令、`peek` 对 `users` 裁剪 `openid/phone/real_name/id_last4`（`94d7e2a`）；4 函数 `OPENID_OF` 模块级全局清除 + `message.markRead` 补会话成员校验（`ee33af5`）；本文档与 README/`git-workflow.md` 纠偏入库（`70e1e23`/`5fe6ad1`）；冒烟回归 7 脚本通过，A2 过期断言已对齐陪诊类目（`a7b3812`）。
+  - 已验证：5 个云函数部署成功；线上调用 `initdb` 实测返回 `FORBIDDEN`（H2 DoD 第 1 项的返回体证据）；`grep -rn "OPENID_OF" cloudfunctions/` = 0（H2 DoD 第 2 项）。
+  - 阻塞中：`TEST_KEY=mwe-test-only` 控制台环境变量配置（用户操作）→ 配置后补跑 m3/m4/m5 五个目标回归；管理员双人化（P9，用户操作）；OCR 密钥轮换（P7——当前 OCR 未开通、无密钥可轮换，开通时按 admin-operations-guide 配置即视同完成）。
+  - 决策记录：**内容安全公共模块抽取推至 S3**——云函数无共享层机制，抽公共模块需引入"部署前同步"步骤；当前 6 处中 5 处逐字一致、message 为有意变体（导流拦截），P0 已清零，收益/成本比不支持本轮做。
+  - 新发现（代码通读）：Q8 升级为 P1（D8 跨院申请 UI 遗漏）；另发现 `verify/index.js:121` OCR 预审顺序依赖缺陷（某材料 OCR 不可用会把已判 verified 重置回 pending）、`detail.js:68`/`publish.js:111` 的 fee=0 显示与入库缺陷、index 首屏双重请求、页面标题"医班互换/医班互助"漂移——均列入 S3 修复范围。
 
 ---
 
