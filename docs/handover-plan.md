@@ -275,7 +275,7 @@ KT 会议    01/02  03/04/05  06
 - **2026-11-11（S2 阶段，develop @ a7b3812）**
   - 已完成：initdb 后门收口——`TEST_KEY` 只从云函数环境变量读取、仓库不再含默认口令、`peek` 对 `users` 裁剪 `openid/phone/real_name/id_last4`（`94d7e2a`）；4 函数 `OPENID_OF` 模块级全局清除 + `message.markRead` 补会话成员校验（`ee33af5`）；本文档与 README/`git-workflow.md` 纠偏入库（`70e1e23`/`5fe6ad1`）；冒烟回归 7 脚本通过，A2 过期断言已对齐陪诊类目（`a7b3812`）。
   - 已验证：5 个云函数部署成功；线上调用 `initdb` 实测返回 `FORBIDDEN`（H2 DoD 第 1 项的返回体证据）；`grep -rn "OPENID_OF" cloudfunctions/` = 0（H2 DoD 第 2 项）。
-  - 阻塞中：`TEST_KEY=mwe-test-only` 控制台环境变量配置（用户操作）→ 配置后补跑 m3/m4/m5 五个目标回归；管理员双人化（P9，用户操作）；OCR 密钥轮换（P7——当前 OCR 未开通、无密钥可轮换，开通时按 admin-operations-guide 配置即视同完成）。
+  - 阻塞中：~~`TEST_KEY=mwe-test-only` 控制台环境变量配置~~ → **当日已配置，目标回归全部通过**：`verify_m3_chat` 6/6、`verify_m3_flow` 7/7、`verify_m3_review` 8/8、`verify_m5_verify` 13/13、`verify_m4_report` 16/16——本次改动的 4 个函数（message/dealing·application 链/review/verify/report）回归全绿。仍待：管理员双人化（P9，用户操作）；OCR 密钥轮换（P7——当前 OCR 未开通、无密钥可轮换，开通时按 admin-operations-guide 配置即视同完成）。
   - 决策记录：**内容安全公共模块抽取推至 S3**——云函数无共享层机制，抽公共模块需引入"部署前同步"步骤；当前 6 处中 5 处逐字一致、message 为有意变体（导流拦截），P0 已清零，收益/成本比不支持本轮做。
   - 新发现（代码通读）：Q8 升级为 P1（D8 跨院申请 UI 遗漏）；另发现 `verify/index.js:121` OCR 预审顺序依赖缺陷（某材料 OCR 不可用会把已判 verified 重置回 pending）、`detail.js:68`/`publish.js:111` 的 fee=0 显示与入库缺陷、index 首屏双重请求、页面标题"医班互换/医班互助"漂移——均列入 S3 修复范围。
 
