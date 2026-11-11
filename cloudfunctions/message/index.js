@@ -31,16 +31,13 @@ async function secCheckText(openid, text) {
   }
 }
 
-async function getUser() {
-  const found = await db.collection('users').where({ openid: OPENID_OF }).get()
-  return found.data[0] || null
-}
-
-let OPENID_OF = null
-
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
-  OPENID_OF = OPENID
+  // getUser 在 main 闭包内捕获 OPENID，禁止模块级全局（云函数实例热复用下并发会串号越权）
+  const getUser = async () => {
+    const found = await db.collection('users').where({ openid: OPENID }).get()
+    return found.data[0] || null
+  }
   const action = event.action || 'conversationList'
   const user = await getUser()
   if (!user && action !== 'conversationList') return { ok: false, message: '请先登录' }
@@ -154,6 +151,9 @@ exports.main = async (event) => {
     const { conversationId } = event
     const conv = await db.collection('conversations').doc(conversationId).get().catch(() => null)
     if (!conv || !conv.data) return { ok: false, message: '会话不存在' }
+    if (conv.data.a_uid !== user._id && conv.data.b_uid !== user._id) {
+      return { ok: false, code: 'FORBIDDEN', message: '无权操作该会话' }
+    }
     const otherUid = conv.data.a_uid === user._id ? conv.data.b_uid : conv.data.a_uid
     const r = await db.collection('messages').where({
       conversation_id: conversationId, from_uid: otherUid, read: false

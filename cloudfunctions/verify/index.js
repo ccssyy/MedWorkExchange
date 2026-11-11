@@ -67,16 +67,13 @@ function judgeMaterial(ocrText, hospitalNames, roleKeywords) {
   return { verdict: 'manual', nameHit, roleHit }
 }
 
-async function getUser() {
-  const found = await db.collection('users').where({ openid: OPENID_OF }).get()
-  return found.data[0] || null
-}
-
-let OPENID_OF = null
-
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
-  OPENID_OF = OPENID
+  // getUser 在 main 闭包内捕获 OPENID，禁止模块级全局（云函数实例热复用下并发会串号越权）
+  const getUser = async () => {
+    const found = await db.collection('users').where({ openid: OPENID }).get()
+    return found.data[0] || null
+  }
   const action = event.action
   const user = await getUser()
   if (!user) return { ok: false, message: '请先登录' }
