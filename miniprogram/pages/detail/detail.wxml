@@ -89,10 +89,6 @@
     </view>
   </view>
 
-  <view wx:if="{{crossHospital}}" class="card cross-card">
-    该撮合单属于其他医院，仅可浏览，不能申请
-  </view>
-
   <block wx:if="{{isOwner}}">
     <view class="section-title" wx:if="{{dealing.status === 'applied'}}">
       申请人（{{applications.length}}）
@@ -125,7 +121,7 @@
   </block>
 
   <block wx:else>
-    <view class="card apply-card" wx:if="{{!myApplication && !crossHospital && (dealing.status === 'published' || dealing.status === 'applied')}}">
+    <view class="card apply-card" wx:if="{{!myApplication && (dealing.status === 'published' || dealing.status === 'applied')}}">
       <textarea
         class="apply-textarea"
         placeholder="给发布方留言（如：同科室，时间合适）"

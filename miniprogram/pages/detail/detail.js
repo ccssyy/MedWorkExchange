@@ -7,7 +7,6 @@ Page({
     dealing: null,
     applications: [],
     isOwner: false,
-    crossHospital: false,
     myApplication: null,
     loading: true,
     applyMessage: '',
@@ -75,7 +74,6 @@ Page({
       this.setData({
         dealing,
         isOwner: !!r.isOwner,
-        crossHospital: !!r.crossHospital,
         applications: r.applications || [],
         myApplication: r.myApplication || null,
         canEdit,
@@ -121,8 +119,6 @@ Page({
           showCancel: false,
           success: () => wx.switchTab({ url: '/pages/profile/profile' })
         })
-      } else if (r.code === 'CROSS_HOSPITAL') {
-        wx.showToast({ title: r.message, icon: 'none' })
       } else {
         wx.showToast({ title: r.message || '申请失败', icon: 'none' })
       }
