@@ -65,7 +65,7 @@ Page({
       }
       dealing.categoryLabel = this.data.categoryLabelMap[dealing.category] || dealing.category
       dealing.statusLabel = this.data.statusLabelMap[dealing.status] || dealing.status
-      dealing.feeLabel = dealing.fee ? `${dealing.fee} 元（线下与对方结清）` : '面议'
+      dealing.feeLabel = dealing.fee != null ? `${dealing.fee} 元（线下与对方结清）` : '面议'
       // 编辑可用性：本人 + published/applied 状态
       const canEdit = !!r.isOwner && ['published', 'applied'].includes(dealing.status)
       // 履约操作区：撮合双方 + confirmed/in_progress/completed 状态

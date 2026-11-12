@@ -13,10 +13,10 @@ Page({
     defaultHospital: '',
     departments: [],
     deptIndex: 0,
-    // 起止时间：日期与时间分开存，提交时拼接（避免字符串截取 bug）
-    startDate: '2026-08-28',
+    // 起止时间：日期与时间分开存，提交时拼接（避免字符串截取 bug）；日期在 onLoad 动态生成
+    startDate: '',
     startTime: '18:00',
-    endDate: '2026-08-29',
+    endDate: '',
     endTime: '08:00',
     title: '',
     detail: '',
@@ -25,6 +25,13 @@ Page({
   },
 
   onLoad() {
+    // 默认起止日期动态生成：明天 → 后天（原硬编码日期会随时间过期）
+    const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const now = new Date()
+    this.setData({
+      startDate: fmt(new Date(now.getTime() + 86400000)),
+      endDate: fmt(new Date(now.getTime() + 2 * 86400000))
+    })
     this.loadDefaults()
   },
 
@@ -108,7 +115,7 @@ Page({
           department: this.data.departments[this.data.deptIndex],
           title: title.trim(),
           detail: detail.trim(),
-          fee: fee ? Number(fee) : null,
+          fee: fee === '' ? null : Number(fee),
           startTime: startIso,
           endTime: endIso
         }
