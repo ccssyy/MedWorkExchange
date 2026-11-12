@@ -51,7 +51,7 @@ M1–M5 主链路已落地并合入 `develop`：双模式撮合状态机、站�
 2. 导入项目：选择本仓库根目录，AppID 已配置（wx31604a391caca372）；
 3. 开通云开发：工具栏「云开发」→ 创建环境 → **把环境 ID 填入 `miniprogram/app.js` 的 `cloudEnv`**；
 4. 初始化数据库：新版控制台无脚本入口，直接部署并调用 `initdb` 云函数（需先在其环境变量配置 `TEST_KEY`）；老环境可执行 `scripts/init-db.js`，并按注释补 4 个复合索引；
-5. 部署云函数：右键 `cloudfunctions/` 下各目录 →「上传并部署：云端安装依赖」（或 `cli cloud functions deploy`，多函数需逐个部署）；
+5. 部署云函数：右键 `cloudfunctions/` 下各目录 →「上传并部署：云端安装依赖」（或 `cli cloud functions deploy`，多函数需逐个部署）；部署 dealing/posts/application/review/report/message 前先运行 `node scripts/sync-common.js` 同步内容安全公共模块；
 6. 编译预览。
 
 ## 里程碑

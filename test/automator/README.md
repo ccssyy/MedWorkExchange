@@ -46,6 +46,10 @@ NODE_PATH=$PWD/node_modules node /Users/samchen/Work/git/MedWorkExchange/test/au
 
 ## 关键经验（踩坑记录）
 
+- **OCR 已配置生效（2026-11-12）**：fixture（吉大一院胸牌）双命中 → 提交即自动 verified；`verify_m5_ui_flow` 已改造为「自动通过/人工审核」双路径断言，两种结果都判 PASS。
+- **m5/m4 类脚本结尾会把 is_admin 置 false**：重跑后需 `setTestUser isAdmin:true` 复位（测试A=用户本人微信，联调期约定常驻管理员）。
+- **部署内容安全相关云函数（dealing/posts/application/review/report/message）前先运行** `node scripts/sync-common.js`（把 cloudfunctions/common/content-security.js 同步进各函数目录，词表单一事实源）。
+
 - **post-publish 页 TOPICS 无「全部」**：index0=规培心得、index1=病例讨论；board 页 index0=全部。两页索引不同。
 - 表单填写优先 `page.setData({title, fee})` 后点 `.submit-btn`，比逐个 input.input() 稳。
 - 列表筛选切换用 `page.setData({sortIndex,feeIndex,topicIndex}) + page.callMethod('loadDealings'/'loadPosts')`，无需模拟 picker 手势。

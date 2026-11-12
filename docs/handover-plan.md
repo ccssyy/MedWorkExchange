@@ -285,6 +285,11 @@ KT 会议    01/02  03/04/05  06
   - T9：首页默认信息域实现——已认证默认本院（可搜索切院、清除=回默认），未认证/患者默认全部；`browsingHospitalId` 死字段彻底移除（f674f1c）。回归 a6a7a8 5/5（A6 卡片 11→2 即默认本院过滤生效的直接证据）、a1a2a4 5/5。
   - 已知脚本副作用：m5_verify 用 `hospitals[0]`（名称排序=中日联谊）提交认证并 approve，会把测试A 的医院锚点改写为中日联谊——非产品缺陷，需要吉大一院锚点时跑 reset_user_a + m5_ui_flow 或控制台改库。
   - S3 剩余：内容安全公共模块抽取、补 3 条回归脚本、v1.2 验收复跑、发布 v0.3.0。
+- **2026-11-12（续 2）：内容安全公共模块抽取完成（H2 DoD 收口）**
+  - 新增 `cloudfunctions/common/content-security.js`（词表/正则/导流正则/msgSecCheck 封装的单一事实源）+ `scripts/sync-common.js` 同步脚本；6 个函数（dealing/posts/application/review/report/message）全部改引用，各 index.js 不再含词表（grep 验证），审计落库与切片长度等业务差异保留在调用侧（70eb55c）。
+  - 6 函数部署完成；管线回归全绿：m3_chat 6/6（导流拦截）、m3_flow 7/7、m3_review 8/8（评价拦截）、m4_report 16/16（描述审核）、m5_verify 13/13、board 10/11（B4 已知时序抖动，b4b6 复测通过、B3 黑名单过）、v2 ✓（隐私拦截）、a5c 5/5（audit_logs 断言过）。
+  - 文档同步：README 部署步骤与 test/automator/README 已补 sync-common 与 OCR/is_admin 复位注意事项。
+  - S3 剩余：补 3 条回归脚本（跨院申请/默认本院/T7 举报）、v1.2 验收复跑（真机双账号用例需用户配合）、发布 v0.3.0（develop --no-ff → main + tag）。
 
 - **2026-11-11（S2 阶段，develop @ a7b3812）**
   - 已完成：initdb 后门收口——`TEST_KEY` 只从云函数环境变量读取、仓库不再含默认口令、`peek` 对 `users` 裁剪 `openid/phone/real_name/id_last4`（`94d7e2a`）；4 函数 `OPENID_OF` 模块级全局清除 + `message.markRead` 补会话成员校验（`ee33af5`）；本文档与 README/`git-workflow.md` 纠偏入库（`70e1e23`/`5fe6ad1`）；冒烟回归 7 脚本通过，A2 过期断言已对齐陪诊类目（`a7b3812`）。
