@@ -115,7 +115,8 @@ exports.main = async (event) => {
     const ocrDetails = []
     for (const m of mats) {
       const r = await ocrImage(m.fileID)
-      if (!r.available) { ocrDetails.push({ fileID: m.fileID, ocr: 'unavailable' }); finalStatus = 'pending'; continue }
+      // OCR 不可用的材料只记录不降级：任一材料双命中即整体 verified，结果与材料顺序无关
+      if (!r.available) { ocrDetails.push({ fileID: m.fileID, ocr: 'unavailable' }); continue }
       const j = judgeMaterial(r.text, nameCandidates, roleWords)
       ocrDetails.push({ fileID: m.fileID, ocr: 'ok', nameHit: j.nameHit, roleHit: j.roleHit })
       if (j.verdict === 'auto_pass') finalStatus = 'verified'
