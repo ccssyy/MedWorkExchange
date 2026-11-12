@@ -2,6 +2,8 @@ const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
+// 内容安全词表/正则单一事实源见 cloudfunctions/common/content-security.js（部署前 node scripts/sync-common.js 同步）
+const cs = require('./content-security')
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
@@ -16,8 +18,16 @@ exports.main = async (event) => {
   if (action === 'apply') {
     const user = await getUser()
     if (!user) return { ok: false, code: 'NO_USER', message: '请先登录' }
+    // 患者角色只能发单/确认，不能申请接单
+    if (user.role === 'patient') {
+      return { ok: false, code: 'PATIENT_FORBIDDEN', message: '患者身份仅可发布陪诊需求，不能接单' }
+    }
     if (user.verify_status !== 'verified') {
       return { ok: false, code: 'NOT_VERIFIED', message: '请先完成医院认证' }
+    }
+    // 信用分门槛（M3：低于 60 限制申请）
+    if ((user.credit_score == null ? 100 : user.credit_score) < 60) {
+      return { ok: false, code: 'LOW_CREDIT', message: '信用分过低，暂时无法申请（如有误请申诉）' }
     }
 
     const { dealingId, message } = event
@@ -42,6 +52,15 @@ exports.main = async (event) => {
     }).count()
     if (dup.total > 0) return { ok: false, message: '已申请过，请等待发布方确认' }
 
+    // 内容安全三级管线同源（申请留言会展示给单主）：本地黑名单 + 隐私正则 → msgSecCheck
+    const msg = String(message || '').trim().slice(0, 100)
+    if (msg) {
+      const local = cs.checkLocal(msg)
+      if (!local.ok) return { ok: false, code: local.code, message: local.message }
+      const sec = await cs.msgSecCheck(OPENID, msg)
+      if (!sec.ok) return sec
+    }
+
     const now = new Date()
     await db.collection('applications').add({
       data: {
@@ -52,7 +71,7 @@ exports.main = async (event) => {
         applicant_department: user.department || '',
         applicant_credit: user.credit_score == null ? 100 : user.credit_score,
         applicant_completed: (user.stats && user.stats.completed) || 0,
-        message: String(message || '').trim().slice(0, 100),
+        message: msg,
         status: 'pending',
         created_at: now,
         updated_at: now

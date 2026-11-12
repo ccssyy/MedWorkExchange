@@ -34,8 +34,23 @@ NODE_PATH=$PWD/node_modules node /Users/samchen/Work/git/MedWorkExchange/test/au
 | verify_b4b6.js | B4 病例话题红条 / B6 点赞轮询复测版 |
 | verify_a10.js | A9-A12 降级验证：`initdb.seedApplication` 构造账号B申请 → A10 确认撮合全链 / A12-A 我的发布，结束自动清理 |
 | verify_v2.js | 需求单发布→编辑→下架→隐私拦截 全链 |
+| verify_m3_chat.js | M3 模块1：发布→seed→确认→会话列表→聊天页收发→导流拦截→markRead |
+| verify_m3_flow.js | M3 模块2：确认→开始履约→确认完成（含 completed 态重复完成被拒） |
+| verify_m3_review.js | M3 模块3+4：互评卡渲染/提交/防重 + status 回读（黑名单/隐私拦截单独补测） |
+| verify_escort_gate.js | 陪诊类目 + 病例讨论分级可见性 gate |
+| verify_patient.js | 患者端：患者角色发布 escort 单/禁止接单/激活页渲染 |
+| verify_m4_report.js | M4 举报仲裁：seed B 接单→举报→防重/self 拦截→is_admin 仲裁成立→下架+落库→已办结再仲裁被拒（驳回/真机对端挪双账号补测） |
+| verify_m5_verify.js | M5 医务认证：提交(OCR降级→pending)→防重→admin 列表→驳回→重交→approve→revoke 保护，结束恢复 verified |
+| reset_user_a.js | 复位测试A：清 verify_status/verify_material/hospital_id/hospitalName（保留 is_admin），末尾回读提交页确认渲染为未认证表单 |
+| verify_m5_ui_flow.js | M5 **小程序端 UI 全链路**：提交页选身份/医院/学信码 →「＋」选图（mock）→ 真实上云 → 提交→pending/自动通过 → verified → 落库留痕核查；每步截图到 `screenshots/` |
+| verify_s3_default_detail.js | S3：首页默认本院过滤（标签/列表口径/切院/清除回默认）+ 详情页无跨院拦截残留（Q8 回归） |
+| verify_t7_report.js | S3：chat 举报对象正确指向对方（T7，otherUid 计算 + 举报落库 reported_uid） |
 
 ## 关键经验（踩坑记录）
+
+- **OCR 已配置生效（2026-11-12）**：fixture（吉大一院胸牌）双命中 → 提交即自动 verified；`verify_m5_ui_flow` 已改造为「自动通过/人工审核」双路径断言，两种结果都判 PASS。
+- **m5/m4 类脚本结尾会把 is_admin 置 false**：重跑后需 `setTestUser isAdmin:true` 复位（测试A=用户本人微信，联调期约定常驻管理员）。
+- **部署内容安全相关云函数（dealing/posts/application/review/report/message）前先运行** `node scripts/sync-common.js`（把 cloudfunctions/common/content-security.js 同步进各函数目录，词表单一事实源）。
 
 - **post-publish 页 TOPICS 无「全部」**：index0=规培心得、index1=病例讨论；board 页 index0=全部。两页索引不同。
 - 表单填写优先 `page.setData({title, fee})` 后点 `.submit-btn`，比逐个 input.input() 稳。
@@ -45,7 +60,15 @@ NODE_PATH=$PWD/node_modules node /Users/samchen/Work/git/MedWorkExchange/test/au
 - tabbar 页必须 `mp.switchTab()`；确认弹窗提前 `mp.mockWxMethod('showModal',{confirm:true})`。
 - 双账号用例（A9-A12 部分环节、B5 的对端视角）需真机第二微信，automator 只能控制当前登录账号。
   - 单账号替代方案：`initdb` 云函数已加 `seedApplication` / `cleanTestApplication` action，可构造 `applicant_uid='TEST_USER_B'` 的申请记录驱动 A 端流程；A 端真实、B 端操作过程 N/A。
+  - `initdb.setTestUser`（testKey 保护）可给当前登录用户临时设 `is_admin` / `credit_score`，用于仲裁流、信用分门槛等权限类用例；**用例开头先强制重置**再断言，防止上一轮 FATAL 未清理的脏状态（M4 首跑教训：遗留 is_admin=true 导致"非 admin 被拒"用例 FAIL）。
 - my-list 页数据字段是 `list`（不是 items）；automator `mp.evaluate(fn, ...args)` 支持向 appService 传参执行 Promise。
+- **mock showModal 必须在连接后立刻设置**——onAccept 等处理器里 await showModal，漏 mock 会永久挂起（M3 chat 首跑教训）。
+- 全局配置改动（app.json 注册新页面/tabBar）热重载不可靠，需 `cli close` + `/v2/auto` 重开触发全量编译（tabBar 显示 M1 旧配置即此因）。
+- `cli cloud functions deploy --names` 逗号分隔多函数在该 IDE 版本不生效，逐个部署。
+- **图片上传类用例的 UI 驱动法**（M5 UI 全链路验证得出）：相册选择是唯一无法模拟的环节，用 `mp.mockWxMethod('chooseMedia', { tempFiles: [{ tempFilePath: <沙箱路径> }] })` 替换；**路径必须是模拟器沙箱内的文件**——先 `wx.getFileSystemManager().writeFile({ filePath: \`${wx.env.USER_DATA_PATH}/x.jpg\`, data: base64, encoding: 'base64' })` 落地文件（`wx.env.USER_DATA_PATH` 在模拟器里是 `http://usr`），再把该路径喂给 mock。传宿主绝对路径会 `file not found`（uploadFile 只能读沙箱内文件）。之后 `wx.cloud.uploadFile`、imgSecCheck、云函数提交全为真实链路。
+- 截图用 `mp.screenshot({ path })`（MiniProgram 上的方法，**Page 上没有 screenshot**）；截 cloud:// 缩略图前留 1s 左右等图片渲染，否则截到空白占位。
+- 认证类 UI 用例前置：账号须为 `verify_status=none`，否则表单区不渲染。先跑 `reset_user_a.js` 复位（保留 is_admin）。
+- 生成测试材料图：`test/fixtures/verify_material_sample.jpg`（Pillow 画的中文胸牌，31KB，供上传类用例复用）。
 
 ## 环境常量
 

@@ -4,16 +4,8 @@ const db = cloud.database()
 const _ = db.command
 
 const TOPICS = ['gp_experience', 'case_discussion', 'help', 'experience', 'exam', 'recruit', 'chat']
-// 本地黑名单：运营可扩展，存 configs 集合，启动加载（Pilot 先用内置词）
-const LOCAL_BLACKLIST = [
-  '法轮功', '赌博', '代开发票', '毒品', '冰毒', '枪支', '买微信号',
-  '加微信', '加V', '微信号', '转账到', '刷单', '代办证书'
-]
-// 患者隐私正则（平台特有：身份证18位/手机号11位）
-const PRIVACY_PATTERNS = [
-  /\d{17}[\dXx]/,
-  /1[3-9]\d{9}/
-]
+// 内容安全词表/正则单一事实源见 cloudfunctions/common/content-security.js（部署前 node scripts/sync-common.js 同步）
+const cs = require('./content-security')
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
@@ -24,39 +16,17 @@ exports.main = async (event) => {
     return found.data[0] || null
   }
 
-  // ════════ 内容安全管线（posts/comments 全走这里）════════
+  // ════════ 内容安全管线（文本走公共模块；命中落审计）════════
   async function secCheckText(content) {
     const text = String(content || '')
-    // 第一道：本地黑名单 + 患者隐私正则
-    for (const w of LOCAL_BLACKLIST) {
-      if (text.includes(w)) {
-        await logAudit(OPENID, 'local_blacklist', text)
-        return { ok: false, code: 'RISK_CONTENT', message: `内容含违规词（${mask(w)}），请修改` }
-      }
+    const local = cs.checkLocal(text)
+    if (!local.ok) {
+      await logAudit(OPENID, local.gate, text)
+      return { ok: false, code: local.code, message: local.message }
     }
-    for (const p of PRIVACY_PATTERNS) {
-      if (p.test(text.replace(/[\s-]/g, ''))) {
-        await logAudit(OPENID, 'privacy_pattern', text)
-        return { ok: false, code: 'RISK_PRIVACY', message: '疑似患者隐私信息（身份证/手机号），请脱敏后发布' }
-      }
-    }
-    // 第二道：msgSecCheck（v2）
-    try {
-      await cloud.openapi.security.msgSecCheck({
-        openid: OPENID,
-        scene: 2,
-        version: 2,
-        content: text
-      })
-      return { ok: true }
-    } catch (e) {
-      if (e.errCode === 87014) {
-        await logAudit(OPENID, 'msgSecCheck', text)
-        return { ok: false, code: 'RISK_CONTENT', message: '内容含违规信息，请修改后重试' }
-      }
-      console.error('msgSecCheck error', e)
-      return { ok: false, code: 'SEC_CHECK_FAIL', message: '系统繁忙，请稍后重试' }
-    }
+    const sec = await cs.msgSecCheck(OPENID, text)
+    if (!sec.ok && sec.gate === 'msgSecCheck') await logAudit(OPENID, sec.gate, text)
+    return sec
   }
 
   // 第三道：图片 imgSecCheck（fileID 逐张）
@@ -97,8 +67,6 @@ exports.main = async (event) => {
       }
     }).catch(() => {})
   }
-
-  function mask(s) { return s.length > 2 ? s.slice(0, 2) + '**' : '**' }
 
   // ════════ 发帖 ════════
   if (action === 'createPost') {
@@ -150,7 +118,7 @@ exports.main = async (event) => {
     return { ok: true, postId: added._id }
   }
 
-  // ════════ 帖子列表（D13：话题/时间/省市筛选）════════
+  // ════════ 帖子列表（D13：话题/时间/省市筛选 + 分级可见性）════════
   if (action === 'listPosts') {
     const { topic, days, province, city, lastId } = event
     const where = { status: 'active' }
@@ -172,6 +140,8 @@ exports.main = async (event) => {
     const res = await query.orderBy('created_at', 'desc').limit(20).get()
     const user = await getUser()
     const uid = user ? user._id : null
+    // 分级可见性：未认证（或游客）对病例讨论帖只显示标题，正文/图片/作者打码
+    const verified = !!(user && user.verify_status === 'verified')
     // 批量查我的点赞
     let likedSet = new Set()
     if (uid && res.data.length) {
@@ -181,36 +151,66 @@ exports.main = async (event) => {
       likes.data.forEach(l => likedSet.add(l.post_id))
     }
     return {
-      posts: res.data.map(p => ({
-        _id: p._id,
-        topic: p.topic,
-        title: p.title,
-        content: p.content.length > 60 ? p.content.slice(0, 60) + '…' : p.content,
-        images: (p.images || []).length,
-        author: p.is_anonymous ? '匿名用户' : (p.author_snapshot.nickname + (p.author_snapshot.hospitalName ? ' · ' + p.author_snapshot.hospitalName : '')),
-        isAnonymous: p.is_anonymous,
-        likeCount: p.like_count,
-        commentCount: p.comment_count,
-        liked: likedSet.has(p._id),
-        city: p.city,
-        createdAgo: timeAgo(p.created_at)
-      }))
+      posts: res.data.map(p => {
+        const gated = !verified && p.topic === 'case_discussion'
+        return {
+          _id: p._id,
+          topic: p.topic,
+          title: p.title,
+          content: gated ? '' : (p.content.length > 60 ? p.content.slice(0, 60) + '…' : p.content),
+          images: gated ? 0 : (p.images || []).length,
+          gated,
+          author: gated ? '认证后可见' : (p.is_anonymous ? '匿名用户' : (p.author_snapshot.nickname + (p.author_snapshot.hospitalName ? ' · ' + p.author_snapshot.hospitalName : ''))),
+          isAnonymous: p.is_anonymous,
+          likeCount: p.like_count,
+          commentCount: p.comment_count,
+          liked: likedSet.has(p._id),
+          city: p.city,
+          createdAgo: timeAgo(p.created_at)
+        }
+      })
     }
   }
 
-  // ════════ 帖子详情 ════════
+  // ════════ 帖子详情（分级可见性）════════
   if (action === 'getPost') {
     const { postId } = event
     const p = await db.collection('posts').doc(postId).get().catch(() => null)
     if (!p || !p.data || p.data.status !== 'active') return { ok: false, message: '帖子不存在' }
     const post = p.data
     const user = await getUser()
+    // 分级可见性：未认证访问病例讨论帖 → 只给标题与锁定标记
+    const verified = !!(user && user.verify_status === 'verified')
+    const gated = !verified && post.topic === 'case_discussion' && (!user || user._id !== post.author_uid)
+    if (gated) {
+      return {
+        ok: true,
+        gated: true,
+        post: {
+          _id: post._id,
+          topic: post.topic,
+          title: post.title,
+          content: '',
+          images: [],
+          gated: true,
+          author: '认证后可见',
+          isMine: false,
+          likeCount: post.like_count,
+          commentCount: post.comment_count,
+          liked: false,
+          city: post.city,
+          createdAgo: timeAgo(post.created_at)
+        }
+      }
+    }
     let liked = false
     if (user) {
       const l = await db.collection('post_likes').where({ post_id: postId, uid: user._id }).count()
       liked = l.total > 0
     }
     return {
+      ok: true,
+      gated: false,
       post: {
         _id: post._id,
         topic: post.topic,

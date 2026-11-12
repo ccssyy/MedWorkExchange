@@ -210,3 +210,30 @@
   border-radius: 999rpx;
   padding: 12rpx 36rpx;
 }
+
+/* 分级可见性锁定卡 */
+.gate-card {
+  text-align: center;
+  padding: 80rpx 40rpx;
+}
+
+.gate-icon {
+  font-size: 80rpx;
+  margin-bottom: 24rpx;
+}
+
+.gate-title {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 16rpx;
+}
+
+.gate-desc {
+  font-size: 26rpx;
+  line-height: 1.6;
+  margin-bottom: 32rpx;
+}
+
+.gate-btn {
+  width: 60%;
+}

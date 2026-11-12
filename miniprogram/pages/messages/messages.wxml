@@ -6,12 +6,19 @@
   </view>
 
   <block wx:else>
-    <view class="card conv" wx:for="{{conversations}}" wx:key="_id">
+    <view class="card conv {{item.unread ? 'conv-unread' : ''}}" wx:for="{{conversations}}" wx:key="_id" data-id="{{item._id}}" bindtap="onConvTap">
+      <view class="conv-avatar">{{item.otherNickname[0]}}</view>
       <view class="conv-info">
-        <view class="conv-title">{{item.dealingTitle}}</view>
-        <view class="conv-last text-secondary">{{item.lastMessage}}</view>
+        <view class="conv-row">
+          <view class="conv-title">{{item.otherNickname}}</view>
+          <view class="conv-time text-hint">{{item.lastTimeLabel}}</view>
+        </view>
+        <view class="conv-row">
+          <view class="conv-last text-secondary">{{item.lastMessage || item.dealingTitle}}</view>
+          <view wx:if="{{item.unread}}" class="unread-badge">{{item.unread > 99 ? '99+' : item.unread}}</view>
+        </view>
+        <view class="conv-dealing text-hint">关联：{{item.dealingTitle}}</view>
       </view>
-      <view class="conv-time text-hint">{{item.lastTimeLabel}}</view>
     </view>
   </block>
 </view>

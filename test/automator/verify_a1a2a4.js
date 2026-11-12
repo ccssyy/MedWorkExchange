@@ -89,7 +89,7 @@ async function main() {
 
   record('A2 医院默认=本院', hospOk, hospitalText.trim())
   record('A2 科室默认=心内科', deptOk)
-  record('A2 类型下拉含值班/病例指导', typeOk && (await pub.data()).categories.length === 2,
+  record('A2 类型下拉含值班/病例指导/陪诊', typeOk && (await pub.data()).categories.length === 3,
     'categories=' + (await pub.data()).categories.map(c => c.label).join('/'))
 
   // ===== A4 时间校验 =====

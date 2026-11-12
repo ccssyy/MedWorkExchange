@@ -1,0 +1,44 @@
+<view class="container">
+  <view class="card intro-card">
+    <view class="intro-title">我是患者/家属</view>
+    <view class="text-secondary intro-desc">
+      激活患者身份后，可发布陪诊需求（陪同就诊、代办跑腿、取报告等），由平台认证医学生接单。酬金线下直接结清。
+    </view>
+  </view>
+
+  <!-- Step 1: 手机号授权 -->
+  <view class="card step-card" wx:if="{{step === 1}}">
+    <view class="step-label">第 1 步 · 手机号验证</view>
+    <button
+      class="btn-primary phone-btn"
+      open-type="getPhoneNumber"
+      bindgetphonenumber="onGetPhone"
+      disabled="{{submitting}}"
+    >{{submitting ? '绑定中…' : '微信手机号快捷授权'}}</button>
+    <view class="agree-row" bindtap="onAgreeToggle">
+      <view class="agree-box {{agree ? 'agree-on' : ''}}">{{agree ? '✓' : ''}}</view>
+      <view class="agree-text text-hint">已阅读并同意《陪诊服务须知》：平台仅提供信息撮合，陪诊人员为平台认证的医务学生/从业者，不提供任何诊疗、导诊、加号、插队服务；就诊事项请遵医嘱。</view>
+    </view>
+  </view>
+
+  <!-- Step 2: 实名信息 -->
+  <view class="card step-card" wx:if="{{step === 2}}">
+    <view class="step-label">第 2 步 · 实名登记</view>
+    <view class="text-hint step-hint">手机号 {{phone}} 已绑定</view>
+    <view class="form-col">
+      <text class="form-label">真实姓名</text>
+      <input class="form-input" placeholder="与身份证一致" value="{{realName}}" bindinput="onRealNameInput" maxlength="20" />
+    </view>
+    <view class="form-col">
+      <text class="form-label">身份证后 4 位</text>
+      <input class="form-input" type="number" placeholder="仅用于身份标识，不采集完整证件号" value="{{idLast4}}" bindinput="onIdLast4Input" maxlength="4" />
+    </view>
+    <button class="btn-primary activate-btn" bindtap="onSubmitRealName" disabled="{{submitting}}">
+      {{submitting ? '提交中…' : '激活患者身份'}}
+    </button>
+  </view>
+
+  <view class="text-hint disclaimer">
+    患者身份仅用于发布陪诊需求；病例讨论等医务内容需医院认证（医务工作者专属）后可见。
+  </view>
+</view>

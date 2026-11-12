@@ -1,0 +1,128 @@
+.container {
+  padding: 24rpx;
+}
+
+.card {
+  background: #fff;
+  border-radius: 16rpx;
+  padding: 32rpx;
+  margin-bottom: 24rpx;
+}
+
+/* 状态卡 */
+.status-card {
+  text-align: center;
+  padding: 60rpx 32rpx;
+}
+
+.status-icon {
+  width: 96rpx;
+  height: 96rpx;
+  line-height: 96rpx;
+  border-radius: 50%;
+  background: #E8F5EE;
+  color: #2E9E6B;
+  font-size: 56rpx;
+  margin: 0 auto 20rpx;
+}
+
+.status-icon.pending {
+  background: #FDF3E5;
+  color: #D98A1F;
+}
+
+.status-icon.rejected {
+  background: #FBEAEA;
+  color: #C94F4F;
+}
+
+.status-text {
+  font-size: 32rpx;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+
+/* 表单 */
+.form-title {
+  font-size: 28rpx;
+  font-weight: 600;
+  margin: 28rpx 0 14rpx;
+}
+
+.form-title:first-child {
+  margin-top: 0;
+}
+
+.picker-value {
+  border: 2rpx solid #E5E7EB;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  font-size: 28rpx;
+}
+
+.picker-value.placeholder {
+  color: #9CA3AF;
+}
+
+.role-hint {
+  margin-top: 12rpx;
+  line-height: 1.5;
+}
+
+/* 图片区 */
+.img-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16rpx;
+  margin-bottom: 14rpx;
+}
+
+.img-item {
+  position: relative;
+  width: 180rpx;
+  height: 180rpx;
+}
+
+.img-thumb {
+  width: 100%;
+  height: 100%;
+  border-radius: 12rpx;
+}
+
+.img-del {
+  position: absolute;
+  top: -12rpx;
+  right: -12rpx;
+  width: 40rpx;
+  height: 40rpx;
+  line-height: 36rpx;
+  text-align: center;
+  border-radius: 50%;
+  background: rgba(0, 0, 0, 0.6);
+  color: #fff;
+  font-size: 28rpx;
+}
+
+.img-add {
+  width: 180rpx;
+  height: 180rpx;
+  border: 2rpx dashed #C9CDD4;
+  border-radius: 12rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 60rpx;
+  color: #9CA3AF;
+}
+
+.chsi-input {
+  border: 2rpx solid #E5E7EB;
+  border-radius: 12rpx;
+  padding: 20rpx 24rpx;
+  font-size: 28rpx;
+  margin-bottom: 32rpx;
+}
+
+.submit-btn {
+  width: 100%;
+}

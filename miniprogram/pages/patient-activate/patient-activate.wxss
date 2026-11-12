@@ -1,0 +1,91 @@
+.intro-card {
+  border-left: 6rpx solid #6B3FA0;
+}
+
+.intro-title {
+  font-size: 34rpx;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+
+.intro-desc {
+  font-size: 26rpx;
+  line-height: 1.6;
+}
+
+.step-card {
+  margin-top: 8rpx;
+}
+
+.step-label {
+  font-size: 28rpx;
+  font-weight: 600;
+  margin-bottom: 24rpx;
+}
+
+.step-hint {
+  margin-bottom: 20rpx;
+}
+
+.phone-btn {
+  width: 100%;
+  margin-bottom: 24rpx;
+}
+
+.agree-row {
+  display: flex;
+  align-items: flex-start;
+}
+
+.agree-box {
+  width: 32rpx;
+  height: 32rpx;
+  border: 2rpx solid #B8C4C0;
+  border-radius: 8rpx;
+  margin-right: 14rpx;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ffffff;
+  font-size: 22rpx;
+}
+
+.agree-on {
+  background: #6B3FA0;
+  border-color: #6B3FA0;
+}
+
+.agree-text {
+  font-size: 22rpx;
+  line-height: 1.6;
+}
+
+.form-col {
+  margin-bottom: 24rpx;
+}
+
+.form-label {
+  display: block;
+  font-size: 26rpx;
+  color: #5F6E6A;
+  margin-bottom: 10rpx;
+}
+
+.form-input {
+  background: #F7F9F8;
+  border-radius: 12rpx;
+  padding: 18rpx 24rpx;
+  font-size: 28rpx;
+}
+
+.activate-btn {
+  width: 100%;
+  margin-top: 8rpx;
+}
+
+.disclaimer {
+  display: block;
+  padding: 24rpx;
+  line-height: 1.7;
+}

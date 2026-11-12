@@ -4,6 +4,9 @@
 # 依赖
 node_modules/
 
+# 自动化脚本截图产物（本地留证，可重跑生成）
+test/automator/screenshots/
+
 # 小程序 IDE
 project.private.config.json
 

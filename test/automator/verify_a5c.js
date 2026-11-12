@@ -36,7 +36,7 @@ async function main() {
   const c1 = await mp.evaluate(mark => new Promise(resolve => {
     wx.cloud.callFunction({
       name: 'initdb',
-      data: { action: 'peek', collection: 'audit_logs', orderField: 'created_at', orderDir: 'desc', limit: 10 }
+      data: { action: 'peek', testKey: 'mwe-test-only', collection: 'audit_logs', orderField: 'created_at', orderDir: 'desc', limit: 10 }
     }).then(r => resolve(r.result)).catch(e => resolve({ ok: false, error: String(e) }))
   }), mark)
   if (c1.ok) {
@@ -56,7 +56,7 @@ async function main() {
   const c2 = await mp.evaluate(() => new Promise(resolve => {
     wx.cloud.callFunction({
       name: 'initdb',
-      data: { action: 'peek', collection: 'dealings', orderField: 'created_at', orderDir: 'desc', limit: 20 }
+      data: { action: 'peek', testKey: 'mwe-test-only', collection: 'dealings', orderField: 'created_at', orderDir: 'desc', limit: 20 }
     }).then(r => resolve(r.result)).catch(e => resolve({ ok: false, error: String(e) }))
   }))
   if (c2.ok) {
@@ -82,7 +82,7 @@ async function main() {
   const c3 = await mp.evaluate(() => new Promise(resolve => {
     wx.cloud.callFunction({
       name: 'initdb',
-      data: { action: 'peek', collection: 'posts', where: { is_anonymous: true }, orderField: 'created_at', orderDir: 'desc', limit: 5 }
+      data: { action: 'peek', testKey: 'mwe-test-only', collection: 'posts', where: { is_anonymous: true }, orderField: 'created_at', orderDir: 'desc', limit: 5 }
     }).then(r => resolve(r.result)).catch(e => resolve({ ok: false, error: String(e) }))
   }))
   if (c3.ok) {
@@ -95,7 +95,7 @@ async function main() {
       const c3b = await mp.evaluate(() => new Promise(resolve => {
         wx.cloud.callFunction({
           name: 'initdb',
-          data: { action: 'peek', collection: 'posts', limit: 10 }
+          data: { action: 'peek', testKey: 'mwe-test-only', collection: 'posts', limit: 10 }
         }).then(r => resolve(r.result)).catch(() => resolve(null))
       }))
       if (c3b && c3b.ok) {

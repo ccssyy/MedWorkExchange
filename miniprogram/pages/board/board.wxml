@@ -24,7 +24,8 @@
         </view>
       </view>
       <view class="post-title">{{item.title}}</view>
-      <view class="post-content text-secondary">{{item.content}}</view>
+      <view class="post-content text-secondary" wx:if="{{!item.gated}}">{{item.content}}</view>
+      <view class="gate-hint" wx:if="{{item.gated}}">🔒 认证后可见，点击查看详情</view>
       <view class="post-foot">
         <view class="post-likes {{item.liked ? 'liked' : ''}}">{{item.liked ? '♥' : '♡'}} {{item.likeCount}}</view>
         <view class="text-hint">评论 {{item.commentCount}}</view>

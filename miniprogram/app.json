@@ -8,12 +8,16 @@
     "pages/detail/detail",
     "pages/my-list/my-list",
     "pages/post-publish/post-publish",
-    "pages/post-detail/post-detail"
+    "pages/post-detail/post-detail",
+    "pages/chat/chat",
+    "pages/patient-activate/patient-activate",
+    "pages/verify-submit/verify-submit",
+    "pages/admin-verify/admin-verify"
   ],
   "window": {
     "navigationBarBackgroundColor": "#0F6E56",
     "navigationBarTextStyle": "white",
-    "navigationBarTitleText": "医班互助",
+    "navigationBarTitleText": "搭班么",
     "backgroundColor": "#F6F7F9",
     "backgroundTextStyle": "dark"
   },

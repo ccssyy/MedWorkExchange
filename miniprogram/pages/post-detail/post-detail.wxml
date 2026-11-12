@@ -1,5 +1,14 @@
 <view wx:if="{{loading}}" class="empty text-hint">加载中…</view>
 
+<view wx:elif="{{gated}}" class="container">
+  <view class="card gate-card">
+    <view class="gate-icon">🔒</view>
+    <view class="gate-title">该帖为病例讨论内容</view>
+    <view class="gate-desc text-secondary">病例内容可能包含患者可识别信息，仅对完成医院认证的医务工作者开放</view>
+    <button class="btn-primary gate-btn" bindtap="onGoVerify">去完成认证</button>
+  </view>
+</view>
+
 <view wx:elif="{{post}}" class="page-wrap">
   <view class="container">
     <view class="card post-card">

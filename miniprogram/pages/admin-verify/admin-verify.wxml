@@ -1,0 +1,51 @@
+<view class="container">
+  <view wx:if="{{loading}}" class="empty text-hint">加载中…</view>
+
+  <view wx:elif="{{!isAdmin}}" class="empty text-hint">需要管理员权限</view>
+
+  <block wx:else>
+    <!-- 审核操作指引 -->
+    <view class="card guide-card">
+      <view class="guide-title">审核指引</view>
+      <view class="guide-item">1. 核对材料中医院名与申请医院一致（支持别名，如「吉大一院」）</view>
+      <view class="guide-item">2. 学生：学信网验证码可到 chsi.com.cn「在线验证报告」输码核验学籍</view>
+      <view class="guide-item">3. 医生：可在卫健委官网 zgcx.nhc.gov.cn/doctor 按姓名+医院查执业注册</view>
+      <view class="guide-item">4. 标「自动预审通过」的是 OCR 抽检对象，重点看图片有无明显伪造</view>
+    </view>
+
+    <view class="section-title">待审（{{list.length}}）</view>
+
+    <view wx:if="{{!list.length}}" class="empty text-hint">暂无待审申请</view>
+
+    <view class="card item-card" wx:for="{{list}}" wx:key="uid">
+      <view class="item-head">
+        <view class="item-name">{{item.nickname}}</view>
+        <view class="tag">{{item.roleLabel}}</view>
+        <view class="tag {{item.auto ? 'tag-auto' : ''}}" wx:if="{{item.auto}}">OCR 自动预审</view>
+      </view>
+      <view class="text-secondary item-hospital">{{item.hospitalName}}</view>
+      <view class="text-hint" wx:if="{{item.chsiCode}}">学信码：{{item.chsiCode}}</view>
+      <view class="text-hint" wx:if="{{!item.ocrAvailable}}">⚠ OCR 未运行（未配置凭证），请人工仔细核对</view>
+
+      <view class="thumbs">
+        <image
+          wx:for="{{item.files}}"
+          wx:for-item="f"
+          wx:for-index="fi"
+          wx:key="*this"
+          class="thumb"
+          src="{{f}}"
+          mode="aspectFill"
+          data-uid="{{item.uid}}"
+          data-index="{{fi}}"
+          bindtap="onPreview"
+        />
+      </view>
+
+      <view class="ops">
+        <view class="op-btn reject" data-uid="{{item.uid}}" bindtap="onReject">驳回</view>
+        <view class="op-btn approve" data-uid="{{item.uid}}" bindtap="onApprove">通过</view>
+      </view>
+    </view>
+  </block>
+</view>

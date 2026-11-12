@@ -3,53 +3,30 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-const ALLOWED_CATEGORIES = ['shift', 'case_guide']
+const ALLOWED_CATEGORIES = ['shift', 'case_guide', 'escort']
 const ALLOWED_TYPES = ['requirement', 'service']
 const ALLOWED_SORTS = ['latest', 'fee_asc', 'fee_desc', 'time_near']
 
-// 内容安全：本地黑名单 + 患者隐私正则（与 posts 云函数同源）
-const LOCAL_BLACKLIST = [
-  '法轮功', '赌博', '代开发票', '毒品', '冰毒', '枪支', '买微信号',
-  '加微信', '加V', '微信号', '转账到', '刷单', '代办证书'
-]
-const PRIVACY_PATTERNS = [
-  /\d{17}[\dXx]/,
-  /1[3-9]\d{9}/
-]
+// 内容安全三级管线（文本）——公共模块单一事实源，词表改动后运行 node scripts/sync-common.js 同步
+const cs = require('./content-security')
 
+// 带审计落库的文本管线（dealing 场景：命中写 audit_logs）
 async function secCheckText(openid, content) {
   const text = String(content || '')
-  for (const w of LOCAL_BLACKLIST) {
-    if (text.includes(w)) {
-      await db.collection('audit_logs').add({
-        data: { openid, gate: 'local_blacklist', snapshot: text.slice(0, 200), created_at: new Date() }
-      }).catch(() => {})
-      return { ok: false, code: 'RISK_CONTENT', message: `内容含违规词，请修改` }
-    }
+  const local = cs.checkLocal(text)
+  if (!local.ok) {
+    await db.collection('audit_logs').add({
+      data: { openid, gate: local.gate, snapshot: text.slice(0, 200), created_at: new Date() }
+    }).catch(() => {})
+    return { ok: false, code: local.code, message: local.message }
   }
-  for (const p of PRIVACY_PATTERNS) {
-    if (p.test(text.replace(/[\s-]/g, ''))) {
-      await db.collection('audit_logs').add({
-        data: { openid, gate: 'privacy_pattern', snapshot: text.slice(0, 200), created_at: new Date() }
-      }).catch(() => {})
-      return { ok: false, code: 'RISK_PRIVACY', message: '疑似患者隐私信息（身份证/手机号），请脱敏后发布' }
-    }
+  const sec = await cs.msgSecCheck(openid, text)
+  if (!sec.ok && sec.gate === 'msgSecCheck') {
+    await db.collection('audit_logs').add({
+      data: { openid, gate: sec.gate, snapshot: text.slice(0, 200), created_at: new Date() }
+    }).catch(() => {})
   }
-  try {
-    await cloud.openapi.security.msgSecCheck({
-      openid, scene: 2, version: 2, content: text
-    })
-    return { ok: true }
-  } catch (e) {
-    if (e.errCode === 87014) {
-      await db.collection('audit_logs').add({
-        data: { openid, gate: 'msgSecCheck', snapshot: text.slice(0, 200), created_at: new Date() }
-      }).catch(() => {})
-      return { ok: false, code: 'RISK_CONTENT', message: '内容含违规信息，请修改后重试' }
-    }
-    console.error('msgSecCheck error', e)
-    return { ok: false, code: 'SEC_CHECK_FAIL', message: '系统繁忙，请稍后重试' }
-  }
+  return sec
 }
 
 exports.main = async (event) => {
@@ -78,9 +55,10 @@ exports.main = async (event) => {
     if (type && ALLOWED_TYPES.includes(type)) where.type = type
     if (status) where.status = status
     if (timeFrom || timeTo) {
-      where.start_time = {}
-      if (timeFrom) where.start_time = _.gte(new Date(timeFrom))
-      if (timeTo) where.start_time = timeFrom ? _.and(_.gte(new Date(timeFrom)), _.lte(new Date(timeTo))) : _.lte(new Date(timeTo))
+      // 按发布时间（created_at）过滤，与前端"近 N 天"文案口径一致
+      where.created_at = {}
+      if (timeFrom) where.created_at = _.gte(new Date(timeFrom))
+      if (timeTo) where.created_at = timeFrom ? _.and(_.gte(new Date(timeFrom)), _.lte(new Date(timeTo))) : _.lte(new Date(timeTo))
     }
     if (feeMin != null || feeMax != null) {
       where.fee = {}
@@ -186,9 +164,11 @@ exports.main = async (event) => {
         ownerNickname: dealing.owner_nickname || '',
         acceptedNickname: dealing.accepted_nickname || '',
         hospitalName: dealing.hospital_name || '',
+        completeRequested: !!dealing.complete_requested,
         createdAt: dealing.created_at
       },
       isOwner,
+      isAcceptedParty: !!(user && dealing.accepted_uid === user._id),
       crossHospital,
       applications: isOwner ? applications : [],
       myApplication: !isOwner && applications.length ? applications[0] : null
@@ -240,8 +220,59 @@ exports.main = async (event) => {
   if (action === 'create') {
     const user = await getUser()
     if (!user) return { ok: false, code: 'NO_USER', message: '请先登录' }
+
+    // 患者角色：仅允许发陪诊需求单（免医院认证，需手机号+实名已激活）
+    if (user.role === 'patient') {
+      const { category: pc, title: pt } = event
+      if (pc !== 'escort') {
+        return { ok: false, code: 'PATIENT_FORBIDDEN', message: '患者身份仅可发布陪诊需求' }
+      }
+      if (user.verify_status === 'none' && !user.phone) {
+        return { ok: false, code: 'PATIENT_NOT_ACTIVE', message: '请先完成患者身份激活' }
+      }
+      if ((user.credit_score == null ? 100 : user.credit_score) < 60) {
+        return { ok: false, code: 'LOW_CREDIT', message: '信用分过低，暂时无法发布' }
+      }
+      const pt2 = String(pt || '').trim()
+      if (!pt2) return { ok: false, message: '标题不能为空' }
+      const now = new Date()
+      const added = await db.collection('dealings').add({
+        data: {
+          type: 'requirement',
+          category: 'escort',
+          hospital_id: user.hospital_id || null,   // 患者可能无医院归属，允许 null
+          hospital_name: user.hospitalName || '',
+          province: user.province || '',
+          city: user.city || '',
+          department: user.department || '',
+          owner_uid: user._id,
+          owner_nickname: user.nickname || '患者用户',
+          owner_role: 'patient',
+          title: pt2.slice(0, 30),
+          detail: String(event.detail || '').trim().slice(0, 500),
+          start_time: null,
+          end_time: null,
+          schedule: '',
+          fee: event.fee == null ? null : Number(event.fee),
+          status: 'published',
+          accepted_uid: null,
+          accept_deadline: null,
+          created_at: now,
+          updated_at: now
+        }
+      })
+      await db.collection('users').doc(user._id).update({
+        data: { 'stats.published': _.inc(1), updated_at: now }
+      })
+      return { ok: true, dealingId: added._id }
+    }
+
     if (user.verify_status !== 'verified' || !user.hospital_id) {
       return { ok: false, code: 'NOT_VERIFIED', message: '请先完成医院认证' }
+    }
+    // 信用分门槛（M3：低于 60 限制发布）
+    if ((user.credit_score == null ? 100 : user.credit_score) < 60) {
+      return { ok: false, code: 'LOW_CREDIT', message: '信用分过低，暂时无法发布（如有误请申诉）' }
     }
 
     const { type, category, title, detail, fee, startTime, endTime } = event
@@ -372,6 +403,81 @@ exports.main = async (event) => {
     await db.collection('dealings').doc(dealingId).update({
       data: { status: 'cancelled', deleted_at: now, updated_at: now }
     })
+    return { ok: true }
+  }
+
+  // ── 开始履约：confirmed → in_progress（双方均可触发）──
+  if (action === 'startService') {
+    const user = await getUser()
+    if (!user) return { ok: false, message: '请先登录' }
+    const { dealingId } = event
+    const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
+    if (!d || !d.data) return { ok: false, message: '撮合单不存在' }
+    const dealing = d.data
+    const isParty = dealing.owner_uid === user._id || dealing.accepted_uid === user._id
+    if (!isParty) return { ok: false, code: 'FORBIDDEN', message: '仅撮合双方可操作' }
+    if (dealing.status !== 'confirmed') {
+      return { ok: false, message: '当前状态不可开始履约' }
+    }
+    const now = new Date()
+    await db.collection('dealings').doc(dealingId).update({
+      data: { status: 'in_progress', started_at: now, updated_at: now }
+    })
+    return { ok: true }
+  }
+
+  // ── 确认完成：in_progress → completed（发布方确认；接单方申请完成待发布方确认）──
+  if (action === 'completeService') {
+    const user = await getUser()
+    if (!user) return { ok: false, message: '请先登录' }
+    const { dealingId } = event
+    const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
+    if (!d || !d.data) return { ok: false, message: '撮合单不存在' }
+    const dealing = d.data
+    const isParty = dealing.owner_uid === user._id || dealing.accepted_uid === user._id
+    if (!isParty) return { ok: false, code: 'FORBIDDEN', message: '仅撮合双方可操作' }
+    if (dealing.status !== 'in_progress') {
+      return { ok: false, message: '当前状态不可确认完成' }
+    }
+    const now = new Date()
+    if (dealing.owner_uid === user._id) {
+      // 发布方直接确认完成
+      await db.collection('dealings').doc(dealingId).update({
+        data: { status: 'completed', completed_at: now, updated_at: now }
+      })
+      await db.collection('users').doc(dealing.accepted_uid).update({
+        data: { 'stats.completed': _.inc(1), updated_at: now }
+      }).catch(() => {})
+      return { ok: true, completed: true }
+    }
+    // 接单方申请完成 → 打标待发布方确认（状态仍 in_progress，complete_requested=true）
+    await db.collection('dealings').doc(dealingId).update({
+      data: { complete_requested: true, complete_requested_at: now, updated_at: now }
+    })
+    return { ok: true, requested: true }
+  }
+
+  // ── 发布方确认接单方的完成申请 ──
+  if (action === 'confirmComplete') {
+    const user = await getUser()
+    if (!user) return { ok: false, message: '请先登录' }
+    const { dealingId } = event
+    const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
+    if (!d || !d.data) return { ok: false, message: '撮合单不存在' }
+    const dealing = d.data
+    if (dealing.owner_uid !== user._id) {
+      return { ok: false, code: 'FORBIDDEN', message: '仅发布方可确认完成' }
+    }
+    if (dealing.status !== 'in_progress' || !dealing.complete_requested) {
+      return { ok: false, message: '无待确认的完成申请' }
+    }
+    const now = new Date()
+    await db.collection('dealings').doc(dealingId).update({
+      data: { status: 'completed', completed_at: now, complete_requested: false, updated_at: now }
+    })
+    await db.collection('users').doc(dealing.accepted_uid).update({
+      data: { 'stats.completed': _.inc(1), updated_at: now }
+    }).catch(() => {})
     return { ok: true }
   }
 

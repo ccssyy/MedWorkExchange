@@ -4,17 +4,19 @@ Page({
   data: {
     categories: [
       { key: 'shift', label: '值班' },
-      { key: 'case_guide', label: '病例指导' }
+      { key: 'case_guide', label: '病例指导' },
+      { key: 'escort', label: '陪诊' }
     ],
     categoryIndex: 0,
     // 默认值：用户档案（认证医院/科室），可改科室
+    isPatient: false,
     defaultHospital: '',
     departments: [],
     deptIndex: 0,
-    // 起止时间：日期与时间分开存，提交时拼接（避免字符串截取 bug）
-    startDate: '2026-08-28',
+    // 起止时间：日期与时间分开存，提交时拼接（避免字符串截取 bug）；日期在 onLoad 动态生成
+    startDate: '',
     startTime: '18:00',
-    endDate: '2026-08-29',
+    endDate: '',
     endTime: '08:00',
     title: '',
     detail: '',
@@ -23,6 +25,13 @@ Page({
   },
 
   onLoad() {
+    // 默认起止日期动态生成：明天 → 后天（原硬编码日期会随时间过期）
+    const fmt = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+    const now = new Date()
+    this.setData({
+      startDate: fmt(new Date(now.getTime() + 86400000)),
+      endDate: fmt(new Date(now.getTime() + 2 * 86400000))
+    })
     this.loadDefaults()
   },
 
@@ -39,11 +48,19 @@ Page({
         '精神科', '皮肤科', '眼科', '耳鼻喉科', '口腔科', '放射科', '超声科', '检验科', '病理科',
         '肿瘤科', '康复科', '全科', '其他']
       const deptIdx = user && user.department ? Math.max(0, depts.indexOf(user.department)) : 0
-      this.setData({
-        defaultHospital: user ? (user.hospitalName || '未认证') : '未登录',
+      // 患者角色：仅陪诊需求单，科室隐藏
+      const isPatient = !!(user && user.isPatient)
+      const patch = {
+        defaultHospital: user ? (user.hospitalName || (isPatient ? '患者/家属' : '未认证')) : '未登录',
         departments: depts,
-        deptIndex: deptIdx
-      })
+        deptIndex: deptIdx,
+        isPatient
+      }
+      if (isPatient) {
+        patch.categories = [{ key: 'escort', label: '陪诊' }]
+        patch.categoryIndex = 0
+      }
+      this.setData(patch)
     })
   },
 
@@ -66,10 +83,11 @@ Page({
       return wx.showToast({ title: '请填写标题', icon: 'none' })
     }
     const user = app.globalData.userInfo
-    if (!user || user.verifyStatus !== 'verified') {
+    const isPatient = !!(user && user.isPatient)
+    if (!user || (!isPatient && user.verifyStatus !== 'verified')) {
       return wx.showModal({
-        title: '需要先认证',
-        content: '发布前请先完成医院认证（我的-医院认证）',
+        title: isPatient ? '需要激活患者身份' : '需要先认证',
+        content: isPatient ? '发布陪诊需求前请先完成患者身份激活（我的-身份认证）' : '发布前请先完成医院认证（我的-身份认证）',
         showCancel: false,
         success: () => wx.switchTab({ url: '/pages/profile/profile' })
       })
@@ -97,7 +115,7 @@ Page({
           department: this.data.departments[this.data.deptIndex],
           title: title.trim(),
           detail: detail.trim(),
-          fee: fee ? Number(fee) : null,
+          fee: fee === '' ? null : Number(fee),
           startTime: startIso,
           endTime: endIso
         }

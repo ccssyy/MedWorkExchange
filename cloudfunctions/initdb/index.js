@@ -1,6 +1,7 @@
 const cloud = require('wx-server-sdk')
 cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
+const _ = db.command
 
 const collections = [
   'users', 'hospitals', 'dealings', 'applications',
@@ -22,10 +23,40 @@ const departments = [
   '肿瘤科', '康复科', '全科', '其他'
 ]
 
+// 运维/测试口令：只从云函数环境变量读取，仓库不落默认值。
+// 未配置 TEST_KEY 的环境（生产）本函数所有调用一律拒绝，防测试后门被利用（交接计划 R1/T1）
+const TEST_KEY = process.env.TEST_KEY || ''
+
 exports.main = async (event = {}) => {
   const logs = []
 
-  // ── 测试辅助：构造/清理"账号B申请"（降级验证 A10/A12 用，验收后删除）──
+  // ── 全函数口令校验：建库/seed/测试辅助都是运维动作，不对普通用户开放 ──
+  if (!TEST_KEY || event.testKey !== TEST_KEY) {
+    return { ok: false, code: 'FORBIDDEN', message: 'initdb requires TEST_KEY env var and matching testKey' }
+  }
+
+  // ── 测试辅助：设置/更新当前用户的测试字段（is_admin / credit_score / verify_status）──
+  if (event.action === 'setTestUser') {
+    const { OPENID } = cloud.getWXContext()
+    const patch = {}
+    if (typeof event.isAdmin === 'boolean') patch.is_admin = event.isAdmin
+    if (event.creditScore != null) patch.credit_score = Number(event.creditScore)
+    if (event.verifyStatus != null && ['none', 'pending', 'verified', 'rejected'].includes(event.verifyStatus)) {
+      patch.verify_status = event.verifyStatus
+    }
+    // clearVerifyMaterial: 连材料、医院绑定一并清空（真正的"复位重走认证流"，而不只是改状态位）
+    if (event.clearVerifyMaterial === true) {
+      patch.verify_material = _.remove()
+      patch.hospital_id = _.remove()
+      patch.hospitalName = _.remove()
+    }
+    if (!Object.keys(patch).length) return { ok: false, message: 'no patch fields' }
+    const r = await db.collection('users').where({ openid: OPENID })
+      .update({ data: { ...patch, updated_at: new Date() } })
+    return { ok: true, updated: (r.stats && r.stats.updated) || 0, patch }
+  }
+
+  // ── 测试辅助：构造/清理"账号B申请"（降级验证 A10/A12 用）──
   if (event.action === 'seedApplication') {
     const { dealingId, nickname, hospital, department, message } = event
     const d = await db.collection('dealings').doc(dealingId).get().catch(() => null)
@@ -62,13 +93,17 @@ exports.main = async (event = {}) => {
   // ── 测试辅助：读库核查（C 组用例，只读）──
   if (event.action === 'peek') {
     const { collection, where, orderField, orderDir, limit } = event
-    const allowed = ['dealings', 'audit_logs', 'posts', 'applications']
+    const allowed = ['dealings', 'audit_logs', 'posts', 'applications', 'reviews', 'users', 'reports', 'messages']
     if (!allowed.includes(collection)) return { ok: false, message: 'collection not allowed' }
     let q = db.collection(collection)
     if (where) q = q.where(where)
     if (orderField) q = q.orderBy(orderField, orderDir === 'asc' ? 'asc' : 'desc')
     const res = await q.limit(Math.min(limit || 10, 50)).get()
-    return { ok: true, data: res.data }
+    // users 只做敏感字段裁剪（openid/手机号/实名不出测试后门），其余字段留给脚本断言
+    const data = collection === 'users'
+      ? res.data.map(({ openid, phone, real_name, id_last4, ...safe }) => safe)
+      : res.data
+    return { ok: true, data }
   }
 
   for (const name of collections) {
