@@ -58,7 +58,9 @@ Page({
   },
 
   onShow() {
-    if (this._needRefresh) this.loadDealings()
+    // 返回本页时刷新（发布/编辑/下架后）；首进由 onLoad 加载，避免双重请求
+    if (this._hasShown) this.loadDealings()
+    this._hasShown = true
   },
 
   loadDepartments() {
@@ -124,7 +126,6 @@ Page({
 
   // ── 数据加载 ──
   loadDealings() {
-    this._needRefresh = true
     const { keyword, sortIndex, categoryIndex, deptIndex, timeIndex, feeIndex,
       categories, departments, times, fees, selectedHospital } = this.data
     this.setData({ loading: true })

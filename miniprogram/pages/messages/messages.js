@@ -11,7 +11,7 @@ Page({
 
   loadConversations() {
     this.setData({ loading: true })
-    wx.cloud.callFunction({
+    return wx.cloud.callFunction({
       name: 'message',
       data: { action: 'conversationList' }
     }).then(res => {
@@ -45,6 +45,7 @@ Page({
 
   onPullDownRefresh() {
     this.loadConversations()
-    wx.stopPullDownRefresh()
+      .then(() => wx.stopPullDownRefresh())
+      .catch(() => wx.stopPullDownRefresh())
   }
 })
