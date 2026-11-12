@@ -80,7 +80,7 @@ Page({
     db.collection('conversations').doc(this.data.conversationId).get().then(res => {
       if (res.data) {
         const appInst = getApp()
-        const me = appInst.globalData.userInfo && appInst.globalData.userInfo._id
+        const me = appInst.globalData.userInfo && appInst.globalData.userInfo.uid
         const otherUid = res.data.a_uid === me ? res.data.b_uid : res.data.a_uid
         this.setData({ dealingTitle: res.data.dealing_title || '', otherUid })
       }
