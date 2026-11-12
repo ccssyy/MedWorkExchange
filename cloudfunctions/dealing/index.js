@@ -78,9 +78,10 @@ exports.main = async (event) => {
     if (type && ALLOWED_TYPES.includes(type)) where.type = type
     if (status) where.status = status
     if (timeFrom || timeTo) {
-      where.start_time = {}
-      if (timeFrom) where.start_time = _.gte(new Date(timeFrom))
-      if (timeTo) where.start_time = timeFrom ? _.and(_.gte(new Date(timeFrom)), _.lte(new Date(timeTo))) : _.lte(new Date(timeTo))
+      // 按发布时间（created_at）过滤，与前端"近 N 天"文案口径一致
+      where.created_at = {}
+      if (timeFrom) where.created_at = _.gte(new Date(timeFrom))
+      if (timeTo) where.created_at = timeFrom ? _.and(_.gte(new Date(timeFrom)), _.lte(new Date(timeTo))) : _.lte(new Date(timeTo))
     }
     if (feeMin != null || feeMax != null) {
       where.fee = {}
