@@ -3,33 +3,8 @@ cloud.init({ env: cloud.DYNAMIC_CURRENT_ENV })
 const db = cloud.database()
 const _ = db.command
 
-// 与 posts/dealing 同源的导流拦截（合规红线 D3：联络一律站内完成）
-const CONTACT_PATTERNS = [
-  /1[3-9]\d{9}/,                          // 手机号
-  /微信号?\s*[:：]?\s*[a-zA-Z0-9_-]{5,}/i, // 微信号
-  /\b(v|vx|wx|weixin)\s*[:：]\s*[a-zA-Z0-9_-]{5,}/i
-]
-
-// 内容安全：与 posts 同源（本地正则 + msgSecCheck v2）
-async function secCheckText(openid, text) {
-  for (const p of CONTACT_PATTERNS) {
-    if (p.test(text.replace(/[\s-]/g, ''))) {
-      return { ok: false, code: 'CONTACT_LEAK', message: '请勿在私信中留联系方式，请通过平台沟通（点击对方头像可看档案）' }
-    }
-  }
-  try {
-    await cloud.openapi.security.msgSecCheck({
-      openid, scene: 2, version: 2, content: text
-    })
-    return { ok: true }
-  } catch (e) {
-    if (e.errCode === 87014) {
-      return { ok: false, code: 'RISK_CONTENT', message: '内容含违规信息，请修改后重试' }
-    }
-    console.error('msgSecCheck error', e)
-    return { ok: false, code: 'SEC_CHECK_FAIL', message: '系统繁忙，请稍后重试' }
-  }
-}
+// 内容安全（导流拦截 + msgSecCheck）——公共模块单一事实源，词表改动后运行 node scripts/sync-common.js 同步
+const cs = require('./content-security')
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
@@ -121,8 +96,10 @@ exports.main = async (event) => {
       return { ok: false, code: 'NOT_LOCKED', message: '撮合确认后才能开始沟通' }
     }
 
-    // 内容安全
-    const sec = await secCheckText(OPENID, text)
+    // 内容安全：先导流拦截（合规红线 D3）再 msgSecCheck
+    const leak = cs.checkContact(text)
+    if (!leak.ok) return { ok: false, code: leak.code, message: leak.message }
+    const sec = await cs.msgSecCheck(OPENID, text)
     if (!sec.ok) return sec
 
     const toUid = c.a_uid === user._id ? c.b_uid : c.a_uid

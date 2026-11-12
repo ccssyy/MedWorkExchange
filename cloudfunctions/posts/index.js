@@ -4,16 +4,8 @@ const db = cloud.database()
 const _ = db.command
 
 const TOPICS = ['gp_experience', 'case_discussion', 'help', 'experience', 'exam', 'recruit', 'chat']
-// 本地黑名单：运营可扩展，存 configs 集合，启动加载（Pilot 先用内置词）
-const LOCAL_BLACKLIST = [
-  '法轮功', '赌博', '代开发票', '毒品', '冰毒', '枪支', '买微信号',
-  '加微信', '加V', '微信号', '转账到', '刷单', '代办证书'
-]
-// 患者隐私正则（平台特有：身份证18位/手机号11位）
-const PRIVACY_PATTERNS = [
-  /\d{17}[\dXx]/,
-  /1[3-9]\d{9}/
-]
+// 内容安全词表/正则单一事实源见 cloudfunctions/common/content-security.js（部署前 node scripts/sync-common.js 同步）
+const cs = require('./content-security')
 
 exports.main = async (event) => {
   const { OPENID } = cloud.getWXContext()
@@ -24,39 +16,17 @@ exports.main = async (event) => {
     return found.data[0] || null
   }
 
-  // ════════ 内容安全管线（posts/comments 全走这里）════════
+  // ════════ 内容安全管线（文本走公共模块；命中落审计）════════
   async function secCheckText(content) {
     const text = String(content || '')
-    // 第一道：本地黑名单 + 患者隐私正则
-    for (const w of LOCAL_BLACKLIST) {
-      if (text.includes(w)) {
-        await logAudit(OPENID, 'local_blacklist', text)
-        return { ok: false, code: 'RISK_CONTENT', message: `内容含违规词（${mask(w)}），请修改` }
-      }
+    const local = cs.checkLocal(text)
+    if (!local.ok) {
+      await logAudit(OPENID, local.gate, text)
+      return { ok: false, code: local.code, message: local.message }
     }
-    for (const p of PRIVACY_PATTERNS) {
-      if (p.test(text.replace(/[\s-]/g, ''))) {
-        await logAudit(OPENID, 'privacy_pattern', text)
-        return { ok: false, code: 'RISK_PRIVACY', message: '疑似患者隐私信息（身份证/手机号），请脱敏后发布' }
-      }
-    }
-    // 第二道：msgSecCheck（v2）
-    try {
-      await cloud.openapi.security.msgSecCheck({
-        openid: OPENID,
-        scene: 2,
-        version: 2,
-        content: text
-      })
-      return { ok: true }
-    } catch (e) {
-      if (e.errCode === 87014) {
-        await logAudit(OPENID, 'msgSecCheck', text)
-        return { ok: false, code: 'RISK_CONTENT', message: '内容含违规信息，请修改后重试' }
-      }
-      console.error('msgSecCheck error', e)
-      return { ok: false, code: 'SEC_CHECK_FAIL', message: '系统繁忙，请稍后重试' }
-    }
+    const sec = await cs.msgSecCheck(OPENID, text)
+    if (!sec.ok && sec.gate === 'msgSecCheck') await logAudit(OPENID, sec.gate, text)
+    return sec
   }
 
   // 第三道：图片 imgSecCheck（fileID 逐张）
@@ -97,8 +67,6 @@ exports.main = async (event) => {
       }
     }).catch(() => {})
   }
-
-  function mask(s) { return s.length > 2 ? s.slice(0, 2) + '**' : '**' }
 
   // ════════ 发帖 ════════
   if (action === 'createPost') {
