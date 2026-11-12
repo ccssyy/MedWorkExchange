@@ -42,7 +42,9 @@ NODE_PATH=$PWD/node_modules node /Users/samchen/Work/git/MedWorkExchange/test/au
 | verify_m4_report.js | M4 举报仲裁：seed B 接单→举报→防重/self 拦截→is_admin 仲裁成立→下架+落库→已办结再仲裁被拒（驳回/真机对端挪双账号补测） |
 | verify_m5_verify.js | M5 医务认证：提交(OCR降级→pending)→防重→admin 列表→驳回→重交→approve→revoke 保护，结束恢复 verified |
 | reset_user_a.js | 复位测试A：清 verify_status/verify_material/hospital_id/hospitalName（保留 is_admin），末尾回读提交页确认渲染为未认证表单 |
-| verify_m5_ui_flow.js | M5 **小程序端 UI 全链路**：提交页选身份/医院/学信码 →「＋」选图（mock）→ 真实上云 → 提交→pending → 审核端点通过 → verified → 落库留痕核查；每步截图到 `screenshots/` |
+| verify_m5_ui_flow.js | M5 **小程序端 UI 全链路**：提交页选身份/医院/学信码 →「＋」选图（mock）→ 真实上云 → 提交→pending/自动通过 → verified → 落库留痕核查；每步截图到 `screenshots/` |
+| verify_s3_default_detail.js | S3：首页默认本院过滤（标签/列表口径/切院/清除回默认）+ 详情页无跨院拦截残留（Q8 回归） |
+| verify_t7_report.js | S3：chat 举报对象正确指向对方（T7，otherUid 计算 + 举报落库 reported_uid） |
 
 ## 关键经验（踩坑记录）
 
