@@ -17,6 +17,25 @@ exports.main = async (event) => {
   const user = await getUser()
   if (!user && action !== 'conversationList') return { ok: false, message: '请先登录' }
 
+  // ── 会话信息（标题 + 对方 uid）：chat 页取 otherUid 用，避免客户端直读库（云函数创建的会话对客户端不可见）──
+  if (action === 'conversationGet') {
+    const { conversationId } = event
+    const conv = await db.collection('conversations').doc(conversationId).get().catch(() => null)
+    if (!conv || !conv.data) return { ok: false, message: '会话不存在' }
+    const c = conv.data
+    if (c.a_uid !== user._id && c.b_uid !== user._id) {
+      return { ok: false, code: 'FORBIDDEN', message: '无权查看该会话' }
+    }
+    const otherUid = c.a_uid === user._id ? c.b_uid : c.a_uid
+    const other = await db.collection('users').doc(otherUid).get().catch(() => null)
+    return {
+      ok: true,
+      dealingTitle: c.dealing_title || '',
+      otherUid,
+      otherNickname: (other && other.data && other.data.nickname) || '医同学'
+    }
+  }
+
   // ── 会话列表（带对方信息与未读数）──
   if (action === 'conversationList') {
     if (!user) return { conversations: [] }
