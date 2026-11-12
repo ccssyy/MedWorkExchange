@@ -41,8 +41,8 @@ Page({
     drawerOpen: false,
     hospitalKeyword: '',
     hospitalResults: [],
-    selectedHospital: null,   // { _id, name }
-    browsingLabel: '本院',
+    selectedHospital: null,   // { _id, name }；null = 默认信息域（本院/全部，loadDealings 内计算）
+    browsingLabel: '',
     dealings: [],
     loading: true,
     categoryLabelMap: { shift: '值班', case_guide: '病例指导', escort: '陪诊' },
@@ -64,15 +64,6 @@ Page({
   },
 
   loadDepartments() {
-    wx.cloud.callFunction({
-      name: 'hospital',
-      data: { action: 'list' }
-    }).then(res => {
-      const hospitals = (res.result && res.result.hospitals) || []
-      if (hospitals.length && !app.globalData.browsingHospitalId) {
-        app.globalData.browsingHospitalId = hospitals[0]._id
-      }
-    })
     // 科室字典：Pilot 端内置（configs 集合同步维护，量小直接本地）
     const depts = ['全部科室', '内科', '外科', '妇产科', '儿科', '急诊科', '重症医学科', '麻醉科',
       '心内科', '呼吸内科', '消化内科', '神经内科', '肾内科', '内分泌科',
@@ -113,14 +104,14 @@ Page({
       selectedHospital: h,
       hospitalResults: [],
       hospitalKeyword: '',
-      browsingLabel: h.name,
       drawerOpen: false
     })
     this.loadDealings()
   },
 
   clearHospital() {
-    this.setData({ selectedHospital: null, browsingLabel: '本院' })
+    // 清除筛选 = 回默认信息域（已认证本院 / 其余全部），标签由 loadDealings 计算
+    this.setData({ selectedHospital: null })
     this.loadDealings()
   },
 
@@ -128,14 +119,19 @@ Page({
   loadDealings() {
     const { keyword, sortIndex, categoryIndex, deptIndex, timeIndex, feeIndex,
       categories, departments, times, fees, selectedHospital } = this.data
-    this.setData({ loading: true })
+    // 默认信息域（D8）：已认证用户默认看本院，未认证/患者看全部；抽屉选院可切换
+    const user = app.globalData.userInfo
+    const ownHospital = user && user.verifyStatus === 'verified' && user.hospitalId
+      ? { _id: user.hospitalId, name: user.hospitalName || '本院' } : null
+    const browsingLabel = selectedHospital ? selectedHospital.name : (ownHospital ? '本院' : '全部')
+    this.setData({ loading: true, browsingLabel })
     const payload = {
       action: 'list',
       keyword: keyword || undefined,
       sort: SORTS[sortIndex].key,
       category: categories[categoryIndex].key || undefined,
       department: deptIndex > 0 ? departments[deptIndex] : undefined,
-      hospitalId: selectedHospital ? selectedHospital._id : undefined,
+      hospitalId: selectedHospital && selectedHospital._id ? selectedHospital._id : (ownHospital ? ownHospital._id : undefined),
       days: times[timeIndex].key || undefined
     }
     const fee = fees[feeIndex].key
