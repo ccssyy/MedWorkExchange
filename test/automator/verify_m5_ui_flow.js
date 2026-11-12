@@ -1,8 +1,10 @@
 // M5 UI 全链路（小程序端真实操作）：
 // 打开提交页 → 选身份/选医院/填学信码 → 「＋」触发选图（mock 仅替代相册选择）
-// → 真实 uploadFile 上云 → 提交云函数 → pending（OCR 未配→人工队列）
-// → 管理员审核端列表 → 点「通过」→ verified → 库内落痕核查 → 页面回读
-// 前置：账号须为 verify_status=none（否则先跑 reset_user_a.js）
+// → 真实 uploadFile 上云 → 提交云函数 → verified（OCR 双命中→自动通过，跳过人工步骤）
+//                                        或 pending（未双命中→人工队列，走审核端→通过）
+// → 库内落痕核查 → 页面回读
+// 前置：账号须为 verify_status=none（否则先跑 reset_user_a.js）；OCR 密钥已配置（2026-11-12），
+// 测试 fixture（吉大一院胸牌）双命中 → 当前环境走自动通过路径
 const automator = require('miniprogram-automator')
 const fs = require('fs')
 const path = require('path')
@@ -122,49 +124,65 @@ async function main() {
   await sleep(1200) // 等缩略图（cloud:// 文件）渲染完成，否则截图里是空白占位
   await shot(mp, '01-提交表单已填好')
 
-  // ===== 6. 提交 =====
+  // ===== 6. 提交（OCR 已配置：双命中 → 自动 verified；未双命中 → pending 人工）=====
   console.log('\n[4] 提交认证')
   const submitBtn = await page.$('.submit-btn')
   record('定位提交按钮', !!submitBtn, submitBtn ? '.submit-btn' : 'not found')
   if (submitBtn) await submitBtn.tap()
 
-  const pending = await waitFor(async () => {
-    const dd = await page.data()
-    return dd.myStatus === 'pending' ? dd : null
+  // 自动通过路径会 navigateBack 销毁页面，统一用接口轮询最终态
+  const done = await waitFor(async () => {
+    const m = await callFn(mp, 'verify', { action: 'myVerify' })
+    return m && (m.status === 'pending' || m.status === 'verified') ? m : null
   }, 20, 500)
-  record('提交成功 → pending（OCR 未配 → 人工队列）', !!pending, pending ? `myStatus=${pending.myStatus}` : 'timeout')
-  record('pending 状态卡渲染', !!(await page.$('.status-icon')), '')
-  record('pending 后提交表单已隐藏', !(await page.$('.submit-btn')), '')
-  await shot(mp, '02-提交后审核中')
+  const autoPass = !!(done && done.status === 'verified')
+  record('提交成功 → ' + (autoPass ? 'verified（OCR 双命中自动通过）' : 'pending（人工队列）'),
+    !!done, done ? `status=${done.status}` : 'timeout')
 
-  // ===== 7. 管理员审核端 =====
-  console.log('\n[5] 管理员审核端')
-  await mp.reLaunch('/pages/admin-verify/admin-verify')
-  const adPage = await waitPage(mp, 'admin-verify')
-  const adData = adPage ? await adPage.data() : null
-  const mine = adData ? (adData.list || []).find(x => x.chsiCode === CHSI) : null
-  record('审核端待审列表可见本人申请', !!mine, adData ? `${(adData.list || []).length} 条待审` : 'timeout')
-  record('申请含材料（可预览）', !!(mine && mine.files.length >= 1), mine ? `${mine.files.length} 张 / ${mine.roleLabel}` : '')
-  await shot(mp, '03-管理员审核端')
+  // ===== 7. 管理员审核端（仅人工路径）=====
+  if (!autoPass) {
+    record('pending 状态卡渲染', !!(await page.$('.status-icon')), '')
+    record('pending 后提交表单已隐藏', !(await page.$('.submit-btn')), '')
+    await shot(mp, '02-提交后审核中')
 
-  // ===== 8. 点「通过」 =====
-  if (mine) {
-    await adPage.callMethod('onApprove', { currentTarget: { dataset: { uid: mine.uid } } })
-    const vf = await waitFor(async () => {
-      const m = await callFn(mp, 'verify', { action: 'myVerify' })
-      return m && m.status === 'verified' ? m : null
-    }, 16, 500)
-    record('审核通过 → verified', !!vf, vf ? `${vf.status} / ${vf.hospitalName}` : 'timeout')
+    console.log('\n[5] 管理员审核端')
+    await mp.reLaunch('/pages/admin-verify/admin-verify')
+    const adPage = await waitPage(mp, 'admin-verify')
+    const adData = adPage ? await adPage.data() : null
+    const mine = adData ? (adData.list || []).find(x => x.chsiCode === CHSI) : null
+    record('审核端待审列表可见本人申请', !!mine, adData ? `${(adData.list || []).length} 条待审` : 'timeout')
+    record('申请含材料（可预览）', !!(mine && mine.files.length >= 1), mine ? `${mine.files.length} 张 / ${mine.roleLabel}` : '')
+    await shot(mp, '03-管理员审核端')
+
+    // ===== 8. 点「通过」 =====
+    if (mine) {
+      await adPage.callMethod('onApprove', { currentTarget: { dataset: { uid: mine.uid } } })
+      const vf = await waitFor(async () => {
+        const m = await callFn(mp, 'verify', { action: 'myVerify' })
+        return m && m.status === 'verified' ? m : null
+      }, 16, 500)
+      record('审核通过 → verified', !!vf, vf ? `${vf.status} / ${vf.hospitalName}` : 'timeout')
+    }
+  } else {
+    console.log('\n[5] 管理员审核端（OCR 秒过，无待审记录，跳过人工步骤）')
+    record('OCR 秒过 → 不入人工审核队列', true, '跳过审核端与裁决步骤')
+    await shot(mp, '02-提交后自动通过')
   }
 
-  // ===== 9. 库内落痕核查（证明走了真实审核流，非直改）=====
+  // ===== 9. 库内落痕核查 =====
   console.log('\n[6] 落库核查')
   const pk = await callFn(mp, 'initdb', { action: 'peek', testKey: 'mwe-test-only', collection: 'users', limit: 10 })
   const u = (pk.data || []).find(x => x._id && x._id.endsWith('61c24d'))
   const mat = u && u.verify_material
-  record('manual_result=approved', !!(mat && mat.manual_result === 'approved'), mat ? String(mat.manual_result) : 'no material')
-  record('reviewed_by 已写入（人工裁决留痕）', !!(mat && mat.reviewed_by), mat && mat.reviewed_by ? '...' + String(mat.reviewed_by).slice(-8) : '')
-  record('auto_verified=false（未走 OCR 自动通过）', !!(mat && mat.auto_verified === false), mat ? String(mat.auto_verified) : '')
+  if (autoPass) {
+    record('auto_verified=true（OCR 自动通过落痕）', !!(mat && mat.auto_verified === true), mat ? String(mat.auto_verified) : '')
+    record('无人工裁决痕迹（秒过未入审核队列）', !!(mat && !mat.manual_result && !mat.reviewed_by),
+      mat ? `manual_result=${mat.manual_result}` : 'no material')
+  } else {
+    record('manual_result=approved', !!(mat && mat.manual_result === 'approved'), mat ? String(mat.manual_result) : 'no material')
+    record('reviewed_by 已写入（人工裁决留痕）', !!(mat && mat.reviewed_by), mat && mat.reviewed_by ? '...' + String(mat.reviewed_by).slice(-8) : '')
+    record('auto_verified=false（未走 OCR 自动通过）', !!(mat && mat.auto_verified === false), mat ? String(mat.auto_verified) : '')
+  }
   record('医院锚点已写入（服务端隔离字段）', !!(u && u.hospital_id && u.hospitalName), u ? String(u.hospitalName) : '')
   record('材料为真实云文件 fileID', !!(mat && mat.files && mat.files[0] && mat.files[0].indexOf('cloud://') === 0),
     mat && mat.files ? mat.files[0].slice(0, 50) : '')
@@ -194,7 +212,7 @@ async function main() {
       if (!r.ok) fail++
       console.log(`${r.ok ? 'PASS' : 'FAIL'} | ${r.name}${r.note ? ' | ' + r.note : ''}`)
     }
-    console.log(fail === 0 ? '\n全部通过 ✓ 小程序端认证全链路走通（提交→人工审核→通过）' : `\n${fail} 项失败`)
+    console.log(fail === 0 ? '\n全部通过 ✓ 小程序端认证全链路走通（提交→审核→verified）' : `\n${fail} 项失败`)
     await mpi.disconnect()
     process.exit(fail === 0 ? 0 : 1)
   }
